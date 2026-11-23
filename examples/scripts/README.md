@@ -1,0 +1,7 @@
+# Example Scripts
+
+This folder contains standalone operator scripts for Stellar-K8s validators: arming protocol upgrades, benchmarking validator storage, and threshold-sharding validator seeds. Each script prints its full usage with `--help`, and the linked runbook explains when and how to run it.
+
+- [`arm-upgrade.sh`](./arm-upgrade.sh) arms, shows, or clears a Stellar Core protocol upgrade on one validator pod by running Stellar Core's `upgrades` HTTP command through `kubectl exec` (`--protocol-version`, `--upgrade-time`, `--get`, `--clear`, `--dry-run`). Run it once per validator; see [protocol upgrades](../../docs/operations/protocol-upgrades.md).
+- [`run-fio-benchmark.sh`](./run-fio-benchmark.sh) benchmarks a bare-metal or NVMe data directory with `fio` jobs that model Stellar Core disk access, and checks the results against the validator and archive targets in [bare-metal IOPS](../../docs/performance/bare-metal-iops.md). It writes only one scratch file inside `--target-dir` and refuses raw block devices.
+- [`shamir-split.py`](./shamir-split.py) splits a validator's secret seed into `k`-of-`n` Shamir shares and recovers it, checking the recovered seed against the public key stored in each share. It uses only the Python standard library so it can run on an air-gapped host (`generate`, `derive`, `split`, `combine`, `verify`, `selftest`); see [key sharding](../../docs/security/key-sharding.md).
