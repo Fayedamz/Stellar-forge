@@ -13,19 +13,19 @@
 use soroban_sdk::{contracttype, Bytes, BytesN, Env, Vec};
 use sha2::{Digest, Sha256};
 
-[#contracttype]
+#[contracttype]
 pub enum RevocationRegistry {
     Bitmap(Bytes),
     MerkleRoot(BytesN<32>),
 }
 
-[#contracttype]
+#[contracttype]
 pub struct MerkleProof {
-    pub siblings: Vec<BytesN:32>,
+    pub siblings: Vec<BytesN<32>>,
     pub path_bits: Bytes,
 }
 
-pub fn is_revoked(_env: &Env, registry: &RevocationRegistry, credential_id: &str, proof: Option&$}) -> bool {
+pub fn is_revoked(_env: &Env, registry: &RevocationRegistry, credential_id: &str, proof: Option<&MerkleProof>) -> bool {
     match registry {
         RevocationRegistry::Bitmap(bitmap) => {
             // Compute bit index as first 4 bytes of sha256(credential_id)
@@ -39,7 +39,7 @@ pub fn is_revoked(_env: &Env, registry: &RevocationRegistry, credential_id: &str
             (byte >> (7 - bit_in_byte)) & 1 == 1
         }
         RevocationRegistry::MerkleRoot(root) => {
-            if let some proof = proof {
+            if let Some(proof) = proof {
                 verify_merkle(credential_id, root, proof)
             } else {
                 false
@@ -48,7 +48,7 @@ pub fn is_revoked(_env: &Env, registry: &RevocationRegistry, credential_id: &str
     }
 }
 
-fn verify_merkle(credential_id: &str, root: &BytesN:32>, proof: &MerkleProof) -> bool {
+fn verify_merkle(credential_id: &str, root: &BytesN<32>, proof: &MerkleProof) -> bool {
     let mut current = hash_credential_id(credential_id);
     for (i, sibling) in proof.siblings.iter().enumerate() {
         let sibling_bytes = sibling.to_array();
