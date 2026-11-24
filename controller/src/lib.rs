@@ -12,10 +12,9 @@
 // limitations under the License.
 //! Stellar-K8s controller crate.
 //!
-//! This crate provides the deployment pipeline and admission webhook modules
-//! used by the Stellar-K8s operator.  It is intentionally kept lean so it can
-//! be compiled quickly and linked into the operator binary without pulling in
-//! heavy optional dependencies.
+//! This crate provides the deployment pipeline, admission webhook modules,
+//! finalizer lifecycle management, and orphaned-volume garbage collection
+//! used by the Stellar-K8s operator.
 //!
 //! # Modules
 //!
@@ -28,6 +27,9 @@
 //!   HPA co-existence guards.
 //! - [`deployment`] — StellarNode deployment pipeline, including the
 //!   [`deployment::optimizer`] WASM bytecode optimizer.
+//! - [`lifecycle`] — kube-rs finalizer injection and execution logic, including
+//!   the hard-timeout fallback that prevents stalled finalizers from blocking
+//!   namespace deletion ([`lifecycle::finalizers`]).
 //! - [`pdb`] — PodDisruptionBudget auto-tuning controller that keeps
 //!   `maxUnavailable` at 0 while validators sync and only relaxes it to 1
 //!   when the quorum can survive losing one validator.
@@ -35,8 +37,14 @@
 //!   Detects `StellarNode` resources stuck in `Terminating` state, verifies
 //!   cloud storage detachment via AWS EBS / GCP PD APIs, and safely removes
 //!   orphaned finalizers without risking data loss.
+//! - [`storage`] — Persistent storage lifecycle management: in-memory tmpfs
+//!   volumes ([`storage::tmpfs`]) and the orphaned-PVC garbage collector
+//!   ([`storage::gc`]).
 //! - [`quorum`] — Quorum-set graph analysis utilities.
 
 pub mod apis;
 pub mod autoscaler;
+pub mod deployment;
+pub mod lifecycle;
 pub mod quorum;
+pub mod storage;
