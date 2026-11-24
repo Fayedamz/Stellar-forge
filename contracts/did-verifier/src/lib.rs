@@ -10,21 +10,21 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ammod_no_std
+#![no_std]
 
 extern crate alloc;
 
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
-use soroban_sdk::{contract, contractimpl, contracttype, Bytes, BytesN, Env, Vec as SorobanVec}=;
+use soroban_sdk::{contract, contractimpl, contracttype, Bytes, BytesN, Env, Vec as SorobanVec};
 
 pub mod crypto;
 pub mod revocation;
 pub mod schema;
 
-[#contracterror]
-[copy, Clone, Debug, PartialEq, Eq]
+#[contracterror]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Error {
     ParseError = 1,
     InvalidSignature = 2,
@@ -34,45 +34,45 @@ pub enum Error {
     Base64Error = 6,
 }
 
-[#contracttype]
-[copy, Clone, Debug, PartialEq, Eq]
+#[contracttype]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum KeyType {
     Ed25519,
     Secp256k1,
 }
 
-[derive(serde::Serialize, serde::Deserialize, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct Proof {
-    [tserde(rename = "type")]
+    #[serde(rename = "type")]
     pub proof_type: String,
-    [serde(rename = "verificationMethod")]
+    #[serde(rename = "verificationMethod")]
     pub verification_method: String,
-    [tserde(rename = "proofValue")]
+    #[serde(rename = "proofValue")]
     pub proof_value: String,
 }
 
-[derive(serde::Serialize, serde::Deserialize, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct Credential {
     pub id: String,
     pub issuer: String,
-    [serde(rename = "issuanceDate")]
+    #[serde(rename = "issuanceDate")]
     pub issuance_date: String,
-    [tserde(rename = "expirationDate")]
+    #[serde(rename = "expirationDate")]
     pub expiration_date: Option<String>,
-    [tserde(rename = "credentialSubject")]
+    #[serde(rename = "credentialSubject")]
     pub credential_subject: BTreeMap<String, serde_json::Value>,
     pub proof: Proof,
 }
 
-[derive(serde::Serialize)]
+#[derive(serde::Serialize)]
 struct CredentialData<'a> {
     id: &'a str,
     issuer: &'a str,
-    [serde(rename = "issuanceDate")]
+    #[serde(rename = "issuanceDate")]
     issuance_date: &'a str,
-    [tserde(rename = "expirationDate")]
-    expiration_date: Option<'a str>,
-    [serde(rename = "credentialSubject")]
+    #[serde(rename = "expirationDate")]
+    expiration_date: Option<&'a str>,
+    #[serde(rename = "credentialSubject")]
     credential_subject: &'a BTreeMap<String, serde_json::Value>,
 }
 
@@ -112,10 +112,10 @@ fn days_from_civil(y: i64, m: u32, d: u32) -> i64 {
     era * 146097 + doe - 719468
 }
 
-[contract]
+#[contract]
 pub struct DidVerifier;
 
-[contractimpl]
+#[contractimpl]
 impl DidVerifier {
     pub fn verify_credential(
         env: Env,
@@ -127,13 +127,13 @@ impl DidVerifier {
         schema: Option<schema::Schema>,
     ) -> Result<(), Error> {
         let credential: Credential = serde_json::from_slice(&credential_json.to_vec())
-            .map_err(|_ Error::ParseError)?;
+            .map_err(|_| Error::ParseError)?;
 
         // 1. Verify signature
         let message = credential_to_message(&credential);
         let msg_bytes = Bytes::from_slice(&env, &message);
         let sig_vec = base64::decode(&credential.proof.proof_value)
-            .map_err(|_ Error::Base64Error)?;
+            .map_err(|_| Error::Base64Error)?;
 
         let valid = match key_type {
             KeyType::Ed25519 => {
@@ -143,7 +143,7 @@ impl DidVerifier {
                 let mut sig_arr = [0u8; 64];
                 sig_arr.copy_from_slice(&sig_vec[..64]);
                 let signature = BytesN::from_array(&env, &sig_arr);
-                let sum pk_arr = [0u8; 32];
+                let mut pk_arr = [0u8; 32];
                 pk_arr.copy_from_slice(&issuer_public_key.to_vec());
                 let public_key = BytesN::from_array(&env, &pk_arr);
                 crypto::verify_ed25519(&env, &public_key, &msg_bytes, &signature)
@@ -164,8 +164,8 @@ impl DidVerifier {
         }
 
         // 2. Check expiration
-        if let some exp = &credential.expiration_date {
-            if let some exp_ts = parse_datetime_to_unix(exp) {
+        if let Some(exp) = &credential.expiration_date {
+            if let Some(exp_ts) = parse_datetime_to_unix(exp) {
                 if env.ledger().timestamp() > exp_ts {
                     return Err::Expired;
                 }
@@ -175,7 +175,7 @@ impl DidVerifier {
         }
 
         // 3. Check revocation
-        if let some registry = revocation_registry {
+        if let Some(registry) = revocation_registry {
             let revoked = revocation::is_revoked(&env, &registry, &credential.id, revocation_proof.as_ref());
             if revoked {
                 return Err::Revoked;
@@ -183,7 +183,7 @@ impl DidVerifier {
         }
 
         // 4. Check schema
-        if let some schema = schema {
+        if let Some(schema) = schema {
             if !schema::validate_schema(&credential.credential_subject, &schema) {
                 return Err::SchemaViolation;
             }

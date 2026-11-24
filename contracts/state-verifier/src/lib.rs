@@ -592,6 +592,8 @@ impl StateVerifier {
     // Administration
     // -----------------------------------------------------------------------
 
+    /// Enables or disables `relayer` as an authorized ledger-checkpoint submitter.
+    /// Requires administrator authorization.
     pub fn set_relayer(env: Env, relayer: Address, enabled: bool) {
         require_admin(&env);
         bump_instance(&env);
@@ -620,14 +622,17 @@ impl StateVerifier {
     // Views
     // -----------------------------------------------------------------------
 
+    /// Returns the configured contract administrator.
     pub fn admin(env: Env) -> Address {
         env.storage().instance().get(&DataKey::Admin).unwrap()
     }
 
+    /// Returns the network identifier used to validate Stellar transaction hashes.
     pub fn network_id(env: Env) -> BytesN<32> {
         network_id(&env)
     }
 
+    /// Returns whether `relayer` is currently authorized to submit checkpoints.
     pub fn is_relayer(env: Env, relayer: Address) -> bool {
         env.storage()
             .persistent()
@@ -635,6 +640,7 @@ impl StateVerifier {
             .unwrap_or(false)
     }
 
+    /// Returns whether `node_id` is currently a trusted validator.
     pub fn is_validator(env: Env, node_id: BytesN<32>) -> bool {
         env.storage()
             .persistent()
@@ -642,10 +648,12 @@ impl StateVerifier {
             .unwrap_or(false)
     }
 
+    /// Returns the anchored ledger record for `ledger_seq`, if it has been verified.
     pub fn ledger(env: Env, ledger_seq: u32) -> Option<LedgerRecord> {
         env.storage().persistent().get(&DataKey::Ledger(ledger_seq))
     }
 
+    /// Returns the committed transaction-result data for `ledger_seq`, if available.
     pub fn results(env: Env, ledger_seq: u32) -> Option<ResultsCommitment> {
         env.storage()
             .persistent()

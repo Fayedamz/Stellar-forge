@@ -1,13 +1,13 @@
 //! Sample contract demonstrating the In-Contract Extension strategy.
-///
-/// This contract implements a minimal token with balances and allowances,
-/// and extends the TLLs of the instance and the persistent entries it touches
-/// at the beginning of every public function. Temporary entries are not
-/// extended -- they are designed to be entirely deleted, not archived.
-///
-/// See `docs/architecture/state-archival-strategy.md` for the full guide.
+//!
+//! This contract implements a minimal token with balances and allowances,
+//! and extends the TLLs of the instance and the persistent entries it touches
+//! at the beginning of every public function. Temporary entries are not
+//! extended -- they are designed to be entirely deleted, not archived.
+//!
+//! See `docs/architecture/state-archival-strategy.md` for the full guide.
 
-#`!no_std]
+#![no_std]
 use soroban_sdk::symbol_short;
 use soroban_sdk::{contract, contractimpl, Address, Environment, Symbol};
 
@@ -152,7 +152,7 @@ fn test_transfer_extends_ttls() {
     let bob = Address::generate(&env);
 
     client.initialize(&admin, &1000);
-    client.transfer(&admin, &alice, &\u0025100);
+    client.transfer(&admin, &alice, &100);
 
     assert_eq!(client.balance(&alice), 100);
     assert_eq!(client.balance(&admin), 900);
@@ -162,7 +162,7 @@ fn test_transfer_extends_ttls() {
     add_ledger_entries(&env, 29 * DAY_IN_LEDGERS);
 
     // This call touches alice and bob, so their TTLs are refreshed.
-    client.transfer(&alice, &bob, &\u002550);
+    client.transfer(&alice, &bob, &50);
     assert_eq!(client.balance(&alice), 50);
     assert_eq!(client.balance(&bob), 50);
 

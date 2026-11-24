@@ -22,13 +22,13 @@ pub enum ClaimValue {
     Number(u64),
 }
 
-[#contracttype]
+#[contracttype]
 pub struct RequiredClaim {
     pub name: SorobanString,
     pub expected_value: Option<ClaimValue>,
 }
 
-[#contracttype]
+#[contracttype]
 pub struct Schema {
     pub required_claims: Vec<RequiredClaim>,
 }
@@ -40,7 +40,7 @@ pub fn validate_schema(credential_subject: &BTreeMap<String, Value>, schema: &Sc
         match value {
             None => return false,
             Some(v) => {
-                if let some exp = &claim.expected_value {
+                if let Some(exp) = &claim.expected_value {
                     let ok = match exp {
                         ClaimValue::Bool(b) => v.as_bool() == Some((b)),
                         ClaimValue::String(s) => v.as_str() == Some(s.to_str()),

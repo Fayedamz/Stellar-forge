@@ -15,6 +15,8 @@
 use soroban_sdk::{contract, contractimpl, contracttype, token, Address, Bytes, BytesN, Env};
 
 mod crypto;
+#[cfg(test)]
+mod test;
 
 #[derive(Clone)]
 #[contracttype]
@@ -50,7 +52,11 @@ impl HtlcContract {
     ) {
         sender.require_auth();
 
-        if env.storage().persistent().has(&DataKey::Lock(hashlock.clone())) {
+        if env
+            .storage()
+            .persistent()
+            .has(&DataKey::Lock(hashlock.clone()))
+        {
             panic!("hashlock already exists");
         }
 
@@ -67,14 +73,20 @@ impl HtlcContract {
             claimed: false,
         };
 
-        env.storage().persistent().set(&DataKey::Lock(hashlock), &escrow);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Lock(hashlock), &escrow);
     }
 
     pub fn claim(env: Env, receiver: Address, hashlock: BytesN<32>, preimage: Bytes) {
         receiver.require_auth();
-        
-        let mut escrow: Escrow = env.storage().persistent().get(&DataKey::Lock(hashlock.clone())).expect("escrow not found");
-        
+
+        let mut escrow: Escrow = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Lock(hashlock.clone()))
+            .expect("escrow not found");
+
         if escrow.claimed {
             panic!("already claimed");
         }
@@ -93,7 +105,9 @@ impl HtlcContract {
         }
 
         escrow.claimed = true;
-        env.storage().persistent().set(&DataKey::Lock(hashlock.clone()), &escrow);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Lock(hashlock.clone()), &escrow);
 
         let token_client = token::Client::new(&env, &escrow.token);
         token_client.transfer(&env.current_contract_address(), &receiver, &escrow.amount);
@@ -101,8 +115,12 @@ impl HtlcContract {
 
     pub fn refund(env: Env, sender: Address, hashlock: BytesN<32>) {
         sender.require_auth();
-        
-        let mut escrow: Escrow = env.storage().persistent().get(&DataKey::Lock(hashlock.clone())).expect("escrow not found");
+
+        let mut escrow: Escrow = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Lock(hashlock.clone()))
+            .expect("escrow not found");
 
         if escrow.claimed {
             panic!("already claimed");
@@ -118,7 +136,9 @@ impl HtlcContract {
         }
 
         escrow.claimed = true;
-        env.storage().persistent().set(&DataKey::Lock(hashlock.clone()), &escrow);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Lock(hashlock.clone()), &escrow);
 
         let token_client = token::Client::new(&env, &escrow.token);
         token_client.transfer(&env.current_contract_address(), &sender, &escrow.amount);

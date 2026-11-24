@@ -32,6 +32,8 @@ pub struct StreamingPayContract;
 
 #[contractimpl]
 impl StreamingPayContract {
+    /// Creates a stream funded by `payer` for `payee` over `duration` seconds.
+    /// Returns the new stream ID; rejects non-positive amounts or durations.
     pub fn create_stream(
         env: Env,
         payer: Address,
@@ -53,7 +55,11 @@ impl StreamingPayContract {
         let token_client = token::Client::new(&env, &token);
         token_client.transfer(&payer, &env.current_contract_address(), &amount);
 
-        let count: u64 = env.storage().instance().get(&DataKey::StreamCount).unwrap_or(0);
+        let count: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::StreamCount)
+            .unwrap_or(0);
         let stream_id = count + 1;
 
         let current_time = env.ledger().timestamp();
@@ -68,12 +74,18 @@ impl StreamingPayContract {
             total_withdrawn: 0,
         };
 
-        env.storage().persistent().set(&DataKey::Stream(stream_id), &stream);
-        env.storage().instance().set(&DataKey::StreamCount, &stream_id);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Stream(stream_id), &stream);
+        env.storage()
+            .instance()
+            .set(&DataKey::StreamCount, &stream_id);
 
         stream_id
     }
 
+    /// Transfers to the payee the amount unlocked by `stream_id` since the previous withdrawal.
+    /// Requires payee authorization and panics if the stream does not exist.
     pub fn withdraw(env: Env, stream_id: u64) {
         let mut stream: Stream = env
             .storage()
@@ -85,7 +97,7 @@ impl StreamingPayContract {
 
         let current_time = env.ledger().timestamp();
         let elapsed = current_time.saturating_sub(stream.start_time);
-        
+
         let mut unlocked_amount = if elapsed >= stream.duration {
             stream.total_amount
         } else {
@@ -97,12 +109,16 @@ impl StreamingPayContract {
         if available > 0 {
             let token_client = token::Client::new(&env, &stream.token);
             token_client.transfer(&env.current_contract_address(), &stream.payee, &available);
-            
+
             stream.total_withdrawn += available;
-            env.storage().persistent().set(&DataKey::Stream(stream_id), &stream);
+            env.storage()
+                .persistent()
+                .set(&DataKey::Stream(stream_id), &stream);
         }
     }
 
+    /// Cancels `stream_id`, paying the payee accrued funds and refunding the payer.
+    /// Requires payer authorization and panics if the stream does not exist.
     pub fn cancel_stream(env: Env, stream_id: u64) {
         let mut stream: Stream = env
             .storage()
@@ -115,7 +131,7 @@ impl StreamingPayContract {
 
         let current_time = env.ledger().timestamp();
         let elapsed = current_time.saturating_sub(stream.start_time);
-        
+
         let unlocked_amount = if elapsed >= stream.duration {
             stream.total_amount
         } else {
@@ -130,12 +146,18 @@ impl StreamingPayContract {
         if payee_owed > 0 {
             token_client.transfer(&env.current_contract_address(), &stream.payee, &payee_owed);
         }
-        
+
         if payer_refund > 0 {
-            token_client.transfer(&env.current_contract_address(), &stream.payer, &payer_refund);
+            token_client.transfer(
+                &env.current_contract_address(),
+                &stream.payer,
+                &payer_refund,
+            );
         }
 
         // Remove the stream from storage
-        env.storage().persistent().remove(&DataKey::Stream(stream_id));
+        env.storage()
+            .persistent()
+            .remove(&DataKey::Stream(stream_id));
     }
 }

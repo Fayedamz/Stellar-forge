@@ -26,7 +26,6 @@
 //! | Repay                            | full, partial, over-repay (clamp), no-debt         |
 //! | CR queries                       | no-debt (MAX), with-debt, after-price-move         |
 
-extern crate std;
 //! | Liquidation — normal             | partial cover, full cover, exact-threshold         |
 //! | Liquidation — bad debt           | insolvent vault isolated, reserve accumulation     |
 //! | Liquidation — boundary           | vault at liq_ratio (not liquidatable)              |
@@ -34,6 +33,8 @@ extern crate std;
 //! | End-to-end                       | full lifecycle: deposit→borrow→price-crash→liquidate|
 
 #![cfg(test)]
+
+extern crate std;
 
 use soroban_sdk::{
     testutils::Address as _,

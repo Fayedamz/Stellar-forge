@@ -93,7 +93,7 @@ pulled.
 
 ```bash
 cosign verify \
-  --certificate-identity-regexp "^https://github.com/OtowoOrg/Stellar-K8s/" \
+  --certificate-identity-regexp "^https://github.com/agnesnaomiolim-cloud/Stellar-forge/" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
   ghcr.io/otoworg/stellar-operator:0.1.0
 ```
@@ -139,7 +139,7 @@ spec:
           attestors:
             - entries:
                 - keyless:
-                    subject: "https://github.com/OtowoOrg/Stellar-K8s/.github/workflows/container-image-security.yml@refs/heads/main"
+                    subject: "https://github.com/agnesnaomiolim-cloud/Stellar-forge/.github/workflows/container-image-security.yml@refs/heads/main"
                     issuer: "https://token.actions.githubusercontent.com"
 ```
 
