@@ -1,3 +1,15 @@
+// Copyright 2024 Stellar-K8s Contributors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //! Flash Loan Receiver Trait
 //!
 //! This module defines [`FlashLoanReceiver`], the interface that every
@@ -43,22 +55,19 @@
 //!         amount: i128,
 //!         fee: i128,
 //!         user_data: Bytes,
-//!     ) -> Result<(), FlashLoanError> {
+//!     ) {
 //!         // 1. Execute profitable trade with the borrowed `amount`.
-//!         // 2. Repay `amount + fee` to the caller (the pool contract).
-//!         let pool = env.current_contract_address(); // caller is the pool
+//!         // 2. Repay `amount + fee` to the pool contract.
+//!         let pool = get_pool_address(&env);
 //!         token::Client::new(&env, &token)
 //!             .transfer(&env.current_contract_address(), &pool, &(amount + fee));
-//!         Ok(())
 //!     }
 //! }
 //! ```
 //!
 //! [`FlashLoanPool`]: crate::FlashLoanPool
 
-use soroban_sdk::{Address, Bytes, Env};
-
-use crate::Error;
+use soroban_sdk::{contractclient, Address, Bytes, Env};
 
 // ---------------------------------------------------------------------------
 // Receiver trait
@@ -93,6 +102,7 @@ use crate::Error;
 /// [`FlashLoanPool`]: crate::FlashLoanPool
 /// [`FlashLoanPool::flash_loan`]: crate::FlashLoanPool::flash_loan
 /// [`Error::RepaymentDeficit`]: crate::Error::RepaymentDeficit
+#[contractclient(name = "FlashLoanReceiverClient")]
 pub trait FlashLoanReceiver {
     /// Called by the [`FlashLoanPool`] immediately after `amount` of `token`
     /// has been transferred to this contract.
@@ -110,13 +120,9 @@ pub trait FlashLoanReceiver {
     /// - `user_data` — arbitrary byte payload forwarded from the original
     ///                 `flash_loan` call; can be empty.
     ///
-    /// # Returns
-    ///
-    /// - `Ok(())` — the operation completed and repayment has been arranged.
-    ///   The pool will still verify the balance after this call returns; an
-    ///   `Ok` result does **not** waive the repayment check.
-    /// - `Err(Error)` — an application-level error occurred.  The pool will
-    ///   propagate this error and the transaction will revert.
+    /// Returning successfully completes the callback, but does not waive the
+    /// pool's repayment check. A callback failure aborts the invocation and
+    /// reverts the transaction.
     ///
     /// # Panics
     ///
@@ -134,12 +140,11 @@ pub trait FlashLoanReceiver {
     ///     amount: i128,
     ///     fee: i128,
     ///     _user_data: Bytes,
-    /// ) -> Result<(), Error> {
+    /// ) {
     ///     let pool = get_pool_address(&env);          // stored during initialisation
     ///     let repayment = amount.checked_add(fee).expect("overflow");
     ///     token::Client::new(&env, &token)
     ///         .transfer(&env.current_contract_address(), &pool, &repayment);
-    ///     Ok(())
     /// }
     /// ```
     ///
@@ -152,7 +157,7 @@ pub trait FlashLoanReceiver {
     ///     amount: i128,
     ///     fee: i128,
     ///     user_data: Bytes,
-    /// ) -> Result<(), Error> {
+    /// ) {
     ///     // 1. Decode trade parameters from user_data.
     ///     let params: TradeParams = decode_params(&user_data);
     ///
@@ -164,17 +169,10 @@ pub trait FlashLoanReceiver {
     ///     token::Client::new(&env, &token)
     ///         .transfer(&env.current_contract_address(), &params.pool, &repayment);
     ///
-    ///     Ok(())
     /// }
     /// ```
     ///
     /// [`FlashLoanPool`]: crate::FlashLoanPool
     /// [`FlashLoanPool::quote_fee`]: crate::FlashLoanPool::quote_fee
-    fn execute_operation(
-        env: Env,
-        token: Address,
-        amount: i128,
-        fee: i128,
-        user_data: Bytes,
-    ) -> Result<(), Error>;
+    fn execute_operation(env: Env, token: Address, amount: i128, fee: i128, user_data: Bytes);
 }

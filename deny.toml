@@ -116,7 +116,6 @@ ignore = [
     { id = "RUSTSEC-2026-0098", reason = "rustls-webpki name constraints; awaiting coordinated upgrade" },
     { id = "RUSTSEC-2026-0099", reason = "rustls-webpki wildcard name constraints; awaiting coordinated upgrade" },
     { id = "RUSTSEC-2026-0104", reason = "rustls-webpki CRL parsing panic; awaiting coordinated upgrade" },
-    { id = "RUSTSEC-2026-0187", reason = "lopdf stack overflow; transitive, not on operator hot path" },
 ]
 
 # ── Sources — only allow crates from trusted registries ───────────────────────

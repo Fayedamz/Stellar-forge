@@ -1,3 +1,15 @@
+// Copyright 2024 Stellar-K8s Contributors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //! # Stellar State Verifier
 //!
 //! A Soroban oracle that lets other contracts check, cryptographically,
@@ -47,6 +59,11 @@ extern crate alloc;
 pub mod merkle;
 mod types;
 pub mod xdr_parser;
+
+/// Maximum number of sibling hashes accepted in a single inclusion proof.
+/// Bounds the SHA-256 loop so a proof can never exceed the transaction CPU
+/// ceiling (2^16 leaves is far beyond any real Stellar ledger).
+pub const MAX_PROOF_DEPTH: u32 = 16;
 
 #[cfg(test)]
 mod fixtures;
@@ -204,6 +221,9 @@ fn verify_inclusion(
         .unwrap_or_else(|| panic_with_error!(env, VerifierError::ResultsNotCommitted));
     if index >= commitment.tx_count {
         panic_with_error!(env, VerifierError::IndexOutOfRange);
+    }
+    if commitment.depth > MAX_PROOF_DEPTH {
+        panic_with_error!(env, VerifierError::TooManyTransactions);
     }
     if proof.len() != 32 * commitment.depth {
         panic_with_error!(env, VerifierError::InvalidProofLength);
@@ -500,10 +520,80 @@ impl StateVerifier {
         bytes32(&env, &envelope_hash(&env, &envelope))
     }
 
+    /// Light-client entrypoint: verifies a state payload against an anchored
+    /// Merkle root. `payload` is hashed with SHA-256 and proven to be the
+    /// leaf at `index` under the results root committed for `ledger_seq`.
+    /// Returns the verified transaction record on success.
+    pub fn verify_state(
+        env: Env,
+        ledger_seq: u32,
+        payload: Bytes,
+        result_code: i32,
+        index: u32,
+        proof: Bytes,
+    ) -> VerifiedTransaction {
+        let tx_hash: [u8; 32] = env.crypto().sha256(&payload).to_array();
+        verify_inclusion(&env, ledger_seq, &tx_hash, result_code, index, &proof)
+    }
+
+    // -----------------------------------------------------------------------
+    // Proof registry
+    // -----------------------------------------------------------------------
+
+    /// Submits a state proof for immediate mathematical validation. The proof
+    /// is checked against the anchored root; on success the submitter and the
+    /// proven leaf are recorded so other protocols can query it.
+    pub fn submit_proof(
+        env: Env,
+        submitter: Address,
+        ledger_seq: u32,
+        tx_hash: BytesN<32>,
+        result_code: i32,
+        index: u32,
+        proof: Bytes,
+    ) -> VerifiedTransaction {
+        submitter.require_auth();
+        bump_instance(&env);
+        let verified = verify_inclusion(
+            &env,
+            ledger_seq,
+            &tx_hash.to_array(),
+            result_code,
+            index,
+            &proof,
+        );
+        let key = DataKey::Proof(ledger_seq, index);
+        if read_persistent::<ProofRecord>(&env, &key).is_none() {
+            let record = ProofRecord {
+                submitter: submitter.clone(),
+                ledger_seq,
+                tx_hash: tx_hash.clone(),
+                result_code,
+                index,
+            };
+            write_persistent(&env, &key, &record);
+            ProofSubmitted {
+                submitter,
+                ledger_seq,
+                tx_hash,
+                index,
+            }
+            .publish(&env);
+        }
+        verified
+    }
+
+    /// Returns the registered proof for `(ledger_seq, index)`, if any.
+    pub fn proof(env: Env, ledger_seq: u32, index: u32) -> Option<ProofRecord> {
+        read_persistent(&env, &DataKey::Proof(ledger_seq, index))
+    }
+
     // -----------------------------------------------------------------------
     // Administration
     // -----------------------------------------------------------------------
 
+    /// Enables or disables `relayer` as an authorized ledger-checkpoint submitter.
+    /// Requires administrator authorization.
     pub fn set_relayer(env: Env, relayer: Address, enabled: bool) {
         require_admin(&env);
         bump_instance(&env);
@@ -532,14 +622,17 @@ impl StateVerifier {
     // Views
     // -----------------------------------------------------------------------
 
+    /// Returns the configured contract administrator.
     pub fn admin(env: Env) -> Address {
         env.storage().instance().get(&DataKey::Admin).unwrap()
     }
 
+    /// Returns the network identifier used to validate Stellar transaction hashes.
     pub fn network_id(env: Env) -> BytesN<32> {
         network_id(&env)
     }
 
+    /// Returns whether `relayer` is currently authorized to submit checkpoints.
     pub fn is_relayer(env: Env, relayer: Address) -> bool {
         env.storage()
             .persistent()
@@ -547,6 +640,7 @@ impl StateVerifier {
             .unwrap_or(false)
     }
 
+    /// Returns whether `node_id` is currently a trusted validator.
     pub fn is_validator(env: Env, node_id: BytesN<32>) -> bool {
         env.storage()
             .persistent()
@@ -554,10 +648,12 @@ impl StateVerifier {
             .unwrap_or(false)
     }
 
+    /// Returns the anchored ledger record for `ledger_seq`, if it has been verified.
     pub fn ledger(env: Env, ledger_seq: u32) -> Option<LedgerRecord> {
         env.storage().persistent().get(&DataKey::Ledger(ledger_seq))
     }
 
+    /// Returns the committed transaction-result data for `ledger_seq`, if available.
     pub fn results(env: Env, ledger_seq: u32) -> Option<ResultsCommitment> {
         env.storage()
             .persistent()

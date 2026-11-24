@@ -1,3 +1,15 @@
+// Copyright 2024 Stellar-K8s Contributors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //! Shared data types for the governance execution queue.
 //!
 //! All types are `#[contracttype]` so Soroban serialises them into ledger storage
@@ -148,6 +160,8 @@ pub enum GovError {
     ExecutionFailed       = 12,
     /// Guardian set is empty (must have at least one).
     EmptyGuardianSet      = 13,
+    /// Guardian signature threshold must be within the guardian set size.
+    InvalidGuardianThreshold = 14,
 }
 
 impl From<GovError> for soroban_sdk::Error {

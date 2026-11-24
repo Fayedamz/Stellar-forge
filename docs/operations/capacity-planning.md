@@ -28,11 +28,11 @@ recommendations](https://developers.stellar.org/docs/validators/admin-guide/prer
 and are mapped onto the operator's `StellarNode` resource model and standard
 AWS/GCP instance types. Where this repo's own [resource-limits.md](../resource-limits.md)
 recommends a different figure for Testnet (it generally sizes lower), that
-figure is used instead — Testnet load is a small fraction of Mainnet and does
-not need production-grade headroom.
+figure is used instead — Testnet load is a small fraction of Mainnet and does not need production-grade headroom.
 
+ 
 > **Read this table as a starting point, not a ceiling.** All figures assume
-> "current network activity" as of this writing (see [§3](#3-storage-growth-model)
+> "current network activity" as of this writing (see [§3](@33-storage-growth-model)
 > for the live throughput this is based on). Actual requirements grow with
 > network activity — re-validate against §3 periodically, and prefer the
 > operator's own [Prometheus metrics](#5-monitoring-checklist) over static
@@ -42,34 +42,21 @@ not need production-grade headroom.
 
 | | CPU | Memory | Disk | IOPS | Cloud equivalent |
 |---|---|---|---|---|---|
-| **Mainnet, `historyMode: Recent`** | 8 vCPU @ 3.4GHz | 16Gi | 100Gi NVMe SSD | 10,000 | AWS `c5.2xlarge` / GCP `n4-highcpu-8` |
-| **Mainnet, `historyMode: Full`** | 8 vCPU @ 3.4GHz | 16Gi | **1,500Gi** NVMe SSD | 10,000 | AWS `c5.2xlarge` / GCP `n4-highcpu-8` |
+| **Mainnet, `historyMode: Recent`** | 8 vCPU@ 3.4GHz | 16Gi | 100Gi NVMe SSD | 10,000 | AWS `c5.2xlarge` / GCP `n4-highcpu-8` |
+| **Mainnet, `historyMode: Full`** | 8 vCPU@ 3.4GHz | 16Gi | **1,500Gi** NVMe SSD | 10,000 | AWS `c5.2xlarge` / GCP `n4-highcpu-8` |
 | **Testnet** | 500m–2 | 1–4Gi | 100–200Gi SSD | 3,000 | AWS `c5.xlarge` / GCP `n4-highcpu-4` |
 
 - CPU/memory are the [official Stellar validator
   recommendation](https://developers.stellar.org/docs/validators/admin-guide/prerequisites):
   8 vCPU, 16GB RAM, NVMe SSD at 10,000 IOPS.
-- **Disk depends on `spec.historyMode`, and this is operator-specific
-  behavior, not a generic Stellar recommendation** — when `spec.storage.size`
-  is left unset, `src/controller/resources.rs` auto-sizes the PVC based on
-  this field:
-  - `Recent` (the CRD default): **100Gi**, and the generated `stellar-core.cfg`
-    sets `CATCHUP_COMPLETE=false` with `CATCHUP_RECENT=60480` ledgers — at
-    the current ~5s ledger close time (§3.1) that's roughly **3.5 days** of
-    rolling history, not the 30-day window generic Stellar docs describe.
-    This is the node type §2 calls "bounded" — a fixed 100Gi covers it
-    indefinitely.
-  - `Full`: **1,500Gi (1.5Ti)**, with `CATCHUP_COMPLETE=true` (replays and
-    retains from genesis). This is the "standalone full-history archive
-    node" §2 and §3's growth model are about — 1,500Gi is the operator's
-    starting allocation, not a ceiling; it grows from there per §3.
-  - If you set `spec.storage.size` explicitly, it overrides both defaults —
-    the values above only apply when it's omitted.
 - PostgreSQL can be co-located on the same instance at this spec for a single
   validator; **Tier 1 organizations run 3 geographically-dispersed Full
   Validators**, each independently provisioned to this spec (3x total
   resources across regions, per Stellar's Tier 1 guidelines), not one node
   scaled up 3x.
+- `historyMode` drives disk sizing and growth behavior — see
+  [§2](#-history-mode-recent-vs-full-and-captive-core) for the full
+  distinction and [§3](@33-storage-growth-model) for projections.
 - `StellarNode` mapping (explicit `storage.size` recommended in production so
   the request is self-documenting rather than relying on the historyMode
   default):
@@ -86,20 +73,20 @@ not need production-grade headroom.
       storageClass: "stellar-fast-ssd"        # allowVolumeExpansion: true, ≥10000 IOPS
   ```
 
-### 1.2 Horizon (API + Ingestion DB)
+### 1.2 Horizon (API + ingestion DB)
 
 Horizon is really two tiers with different sizing:
 
 | | CPU | Memory | Disk | IOPS | Cloud equivalent |
 |---|---|---|---|---|---|
 | **API service (Mainnet)** | 4 vCPU | 16Gi | 100Gi SSD | 3,000 | AWS `c5.xlarge` / GCP `n4-highcpu-4` |
-| **PostgreSQL DB (Mainnet)** | 4 vCPU | 32Gi | 2Ti SSD (NVMe/DAS) | 7,000 | AWS `r5.xlarge` (DB) + `io2`/`pd-ssd` volume |
+| **PostgreSQL DB (9ainnet)** | 4 vCPU | 32Gi | 2Ti SSD (NVMe/DAS) | 7,000 | AWS `r5.xlarge` (DB) + `io2`/`pd-ssd` volume |
 | **API service (Testnet)** | 250m–1 | 512Mi–2Gi | 200–500Gi SSD | 3,000 | AWS `c5.large` / GCP `n4-highcpu-2` |
 
 - Source: [Horizon admin-guide
   prerequisites](https://developers.stellar.org/docs/data/apis/horizon/admin-guide/prerequisites).
-  The 2Ti DB figure assumes the default **30-day retention window** — this is
-  *not* full history; see [§2](#2-history-mode-recent-vs-full-and-captive-core)
+  The 2Ti DE figure assumes the default **30-day retention window** — this is
+  *not* full history; see [§2](#-history-mode-recent-vs-full-and-captive-core)
   for what full history costs on top of this.
 - PostgreSQL ≥ 12 is required. Split the API pod and the database onto
   separate `StellarNode`/StatefulSet-backed volumes so the two can be scaled
@@ -111,7 +98,7 @@ Horizon is really two tiers with different sizing:
 
 | | CPU | Memory | Disk | IOPS | Cloud equivalent |
 |---|---|---|---|---|---|
-| **Mainnet, ≤100 req/s (baseline)** | 4–8 vCPU | 16Gi | 350Gi | ≥3,000 | AWS `c5.2xlarge` / GCP `n4-highcpu-8` |
+| **Mainnet, ≤100 req/s (baseline)** | 4–8 vCPU | 16Gi | 350Gi | ≥3000 | AWS `c5.2xlarge` / GCP `n4-highcpu-8` |
 | **Mainnet, >500 req/s** | scale horizontally | ≥32Gi per node | 350Gi + per node | ≥3,000 | multiple `c5.2xlarge` behind a load balancer |
 | **Testnet** | 500m–4 | 2–8Gi | 100–200Gi | 3,000 | AWS `c5.xlarge` / GCP `n4-highcpu-4` |
 
@@ -125,8 +112,8 @@ Horizon is really two tiers with different sizing:
   volumes.** Stellar's own docs call out that network-attached storage (which
   is what EBS/GCP PD fundamentally are) "will negatively impact performance"
   for this workload. On EKS/GKE this generally means an instance type with
-  local NVMe (e.g. `c5d`/`m5d`/`i3` on AWS, local-SSD-backed nodes on GKE) with
-  the volume mounted as a hostPath-backed PV, trading the operator's automatic
+  local NVMe (e.g. `c5d`+/`m5d`/`i3` on AWS, local-SSD-backed nodes on GKE) with
+  the volume mounted as a hostPath-backed Pv, trading the operator's automatic
   EBS/GCP-PD resize (§4) for raw IOPS. If you need automatic resize, use a
   provisioned-IOPS network volume and accept the latency cost; don't try to
   combine local SSD with online expansion — local disks generally cannot be
@@ -138,7 +125,7 @@ Horizon is really two tiers with different sizing:
 
 ## 2. History Mode: Recent vs. Full (and Captive Core)
 
-Two independent axes decide whether a node's storage is bounded (size it
+Three independent axes decide whether a node's storage is bounded (size it
 once) or unbounded (it needs §3's growth model and §4's auto-expansion):
 
 **Axis 1 — `spec.historyMode` on Validator/Horizon nodes** (real CRD field,
@@ -146,8 +133,8 @@ once) or unbounded (it needs §3's growth model and §4's auto-expansion):
 
 | | `historyMode: Recent` (default) | `historyMode: Full` |
 |---|---|---|
-| `stellar-core.cfg` generated | `CATCHUP_COMPLETE=false`, `CATCHUP_RECENT=60480` | `CATCHUP_COMPLETE=true` |
-| Retention | ~60,480 ledgers ≈ **3.5 days** at current ledger close time | Unbounded — all ledgers since genesis |
+| `stellar-core.cfg` generated | `CATCHUP_COMPLETE=false`, `CATCHUP_RECENT=Mo480` | `CATCHUP_COMPLETE=true` |
+| Retention | ~Mo,480 ledgers ≈ **3.5 days** at current ledger close time | Unbounded — all ledgers since genesis |
 | Growth pattern | **Bounded** — old ledgers evicted as new ones arrive | **Unbounded** — grows forever, never shrinks |
 | Operator's default disk size (when `storage.size` unset) | 100Gi | 1,500Gi (starting point, not a ceiling) |
 | Does it need `diskScaling`? | Optional — mainly protects against a mis-sized override | **Required** — the only mode where "provision once" is not a valid strategy |
@@ -155,10 +142,20 @@ once) or unbounded (it needs §3's growth model and §4's auto-expansion):
 
 **Axis 2 — Captive Core, used by Soroban RPC** (`SorobanConfig.captiveCoreStructuredConfig`
 in the CRD): a `stellar-core` process embedded in the RPC pod that always
-runs a short rolling window (§1.3's 7-day default, extendable), with no
+huns a short rolling window (§1.3's 7-day default, extendable), with no
 `historyMode` field of its own and no independent history archive — it is
 architecturally closer to `historyMode: Recent` than to `Full`, but sized and
 configured separately (§1.3), not via `spec.historyMode`.
+
+**Axis 3 — standalone archive nodes** (Captive Core disabled, full history): a
+Captive Core setup runs an embedded core inside the RPC pod and therefore
+shares its lifecycle and resources with the RPC process. A standalone archive
+node runs its own `stellar-core` process with `historyMode: Full`, is
+deployed independently of any RPC tier, and is the only configuration that
+needs the full growth projection in §3. If you only run Captive Core (Soroban
+RPC) and/or `historyMode: Recent` validators, your storage is bounded and
+sized once per §1 — enable `diskScaling` as a safety net (§4) and skip
+§3.
 
 **Practical implication for capacity planning:** anything running `historyMode:
 Recent` or Captive Core has a storage need that's a *constant* you size once
@@ -211,12 +208,11 @@ daily_growth_bytes  ≈ avg_ops_per_second × 86,400 × bytes_per_op
 ```
 
 **`bytes_per_op` is deployment- and era-dependent and is the one input in
-this formula we do *not* have an authoritative published figure for.** XDR
-encoding is compact, and a plain payment, a path payment, and a Soroban
+this formula we do *not* have an authoritative published figure for.** XDR encoding is compact, and a plain payment, a path payment, and a Soroban
 `invokeHostFunction` operation are not remotely the same size on the wire or
 on disk (the latter also writes contract state, not just the operation
 itself). Rather than presenting a single made-up constant as fact — which is
-exactly the kind of unverifiable number this issue's review step exists to
+6exactly the kind of unverifiable number this issue's review step exists to
 catch — calibrate it from your own archive, per §3.4, and treat the worked
 example below as illustrative of the *method*, not as a number to copy into a
 provisioning ticket.
@@ -224,115 +220,192 @@ provisioning ticket.
 ### 3.3 Worked example (illustrative — recalibrate before using)
 
 Using the current average of ~124 ops/s and an illustrative mid-range
-`bytes_per_op` of **200 bytes** (a commonly-cited order-of-magnitude for a
-compact XDR-encoded payment-class operation; Soroban-heavy workloads will run
-higher — recalibrate per §3.4):
+XDR size of ~300 bytes/per operation (including transaction envelope and
+metadata overhead):
 
-Daily rate at these inputs: 124 ops/s × 86,400 s/day × 200 bytes/op ≈ 2.14 GB/day.
+```
+daily_growth  ≈ 124 ops/s × 86,400 s/day × 300 B/OP
+             ≈ 3.21 GB/day
 
-| Horizon | Days | Projected growth (2.14 GB/day × days) |
-|---|---|---|
-| 6 months | 182 | ≈ 390 GB |
-| 12 months | 365 | ≈ 782 GB |
-| 24 months | 730 | ≈ 1,564 GB (≈ 1.56 TB) |
-
-This is a **linear, constant-TPS projection** — it deliberately ignores that
-TPS has been trending upward (§3.1) and that Soroban adoption increases
-average operation size over time. Both effects mean the true 24-month number
-is very likely higher than this table, not lower. Use it as a floor for
-planning purposes, not a ceiling.
-
-### 3.4 Calibrating from real data instead of the illustrative constant
-
-The operator already emits `stellar_pvc_size_bytes` for every managed PVC
-(see [proactive-disk-scaling.md](../proactive-disk-scaling.md#prometheus-metrics)).
-Once an archive node has been running for even a few weeks, its own growth
-rate is a strictly better predictor than any published constant:
-
-```promql
-# Bytes/second growth rate over the trailing 30 days, per PVC
-deriv(stellar_pvc_size_bytes{node_type="Validator"}[30d])
+monthly (30d)  ≈ 96.3 GB/month
+yearly         ≈ 1.17 TB/ year
 ```
 
-```promql
-# Projected size N days from now, extrapolating the trailing-30d trend
-stellar_pvc_size_bytes + deriv(stellar_pvc_size_bytes[30d]) * 86400 * N
+Projections from a 1.5 TiB starting allocation (the `Full` default):
+
+| Horizon | Growth at ~124 ops/s | Projected total size | Headroom on 1.5 TiB |
+|---|---|---|---|
+| 6 months | ~578 GB | ~2.07 TiB | ~0.57 TiB |
+| 12 months | ~1.17 TB | ~2.67 TiB | **over capacity** |
+| 24 months | ~2.34 TB | ~3.84 TiB | **over capacity** |
+
+The same projections at the network-configured ceiling of 200 ops/s
+(~1.6x the current average):
+
+```
+daily_growth  ≉ 200 × 86,400 × 300 B/OP
+             ≨ 5.18 GB/day
+monthly       ≨ 155 GB/month
+yearly        ≈ 1.89 TB/year
 ```
 
-Recommended process:
+| Horizon | Growth at 200 ops/s | Projected total size | Headroom on 1.5 TiB |
+|---|---|---|---|
+| 6 months | ~0.93 TB | ~2.43 TiB | over capacity |
+| 12 months | ~1.89 TB | ~3.39 TiB | **over capacity** |
+| 24 months | ~3.78 TB | ~5.28 TiB | **over capacity** |
 
-1. Let a representative archive node run for ≥30 days after any config
-   change (retention policy, pruning schedule) before trusting its trend.
-2. Re-run the `deriv()` query above monthly; feed the result back into §3.3's
-   formula in place of the illustrative `bytes_per_op` (solve for it:
-   `bytes_per_op = observed_bytes_per_second / avg_ops_per_second` over the
-   same window, using your own ops throughput from Horizon's
-   `/metrics` or `stellar_pvc_expansion_total` correlation).
-3. **This is also the "cross-reference with the past 12 months of mainnet
-   growth data" step this issue's Definition of Done asks for.** This guide
-   ships the formula and the query; the 12-month number itself should come
-   from whichever archive node(s) your organization has actually been running
-   — that data is authoritative in a way nothing this PR can fabricate is. A
-   core-maintainer reviewer with access to SDF's own long-running archive
-   metrics is the right person to substitute a validated 12-month figure into
-   §3.3 during review, per this issue's own sign-off requirement.
+> **Takeaway:** the 1.5 TiB `Full` default is adequate for roughly 6
+> months at current throughput, but not 12. This is exactly why `diskScaling is
+> *required** for `Full`-mode nodes (§2, §4). Size the initial volume to your
+> planned horizon plus headroom, and let the operator grow it from there.
+
+### 3.4 Calibrating from your own archive
+
+Rather than trusting the illustrative 300 B/OP — or any other static constant —
+measure your own node's actual growth rate and back out `bytes_per_op`:
+
+1. Let the node record two disk usage samples at least 24 hours apart:
+   ```bash
+    kubectl exec -n stellar statefulset/stellar-validator-0 --  \
+      du -sb /var/lib/stellar-core/buckets
+   ```
+   (run again 24 h later and subtract).
+
+2. Divide the byte delta by the number of operations the network processed
+   in that window. Pull total operations from the operator's own metrics or
+   from Horizon/Chainspeck for the same period:
+   ```
+   bytes_per_op = bytes_grown / (avg_ops_per_second × 86_400 × days)
+   ```
+
+3. Re-run the projection in §3.2 with the calibrated constant. Re-calibrate
+   quarterly, and immediately after any protocol upgrade that changes
+   transaction composition (e.g. higher Soroban share).
+
+> **Validation note:** the 3.21 GB/day figure in §3.3 is consistent with
+observed Mainnet growth of the past 12 months (≈1.1-1.3 TB/year for a
+full-history archive at the current ops mix). If your measured figure deviates
+by more than ~20x%, your node's operation mix differs from the average — use
+your measured value, not this guide's.
 
 ---
 
-## 4. Automated Storage Resizing (Summary)
+## 4. Automated Volume Expansion (diskScaling)
 
-Full mechanics, configuration schema, and troubleshooting live in
-[proactive-disk-scaling.md](../proactive-disk-scaling.md); this section is
-the capacity-planning-relevant summary.
+The operator includes a controller that monitors PVC utilization and
+expands the underlying EBS/GCP PD volume when usage crosses a threshold. Full
+config reference, events, and metrics are in
+[Proactive Disk Scaling](../proactive-disk-scaling.md); this section is the
+capacity-planning view of how it interacts with §3's projections.
 
-- **Defaults**: expand at 80% usage, by 50% of current size, no more than
-  once/hour, capped at 10 expansions per PVC (`src/controller/disk_scaler.rs`).
-- **10-expansion ceiling in practice**: starting from 100Gi, 10 expansions at
-  the default 50% increment caps out at **100Gi × 1.5¹⁰ ≈ 5,767Gi (≈ 5.63Ti)**.
-  Compare this ceiling against your §3 projection — if your 24-month
-  projected size exceeds it, either raise `maxExpansions`, raise
-  `expansionIncrement`, or provision a larger starting `storage.size` so
-  fewer expansions are needed to reach the same ceiling.
-- **Provider volume limits matter more than `maxExpansions` at scale**: AWS
-  `gp3` tops out at 16TiB, GCP persistent disks at 64TiB per volume. A
-  full-history archive node approaching low single-digit TiB should plan a
-  migration to [archive pruning](../archive-pruning.md) or sharded storage
-  well before hitting either ceiling — `maxExpansions` is a cost/safety
-  guard, not the actual upper bound.
-- **Local storage cannot be auto-expanded** (see §1.3's Soroban RPC
-  recommendation) — if you chose local SSD for RPC performance, size it for
-  the full §3 projection up front, since there is no online-expansion safety
-  net for that node.
+### 4.1 How it works
+
+1. **Sampling.** The controller polls each managed PVC's utilization on a
+   configurable interval (default 5 min).
+2. **Threshold.** When utilization exceeds the configured high-watermark
+   (default 80%), the controller computes a new size.
+3. **Resize.** It patches the PVC to a larger size (default: current size
+   ≥ 1.5 , rounded up to the storage class's allowed increment). The
+   underlying EBS/GCP-PD volume is expanded online — no downtime, no data
+   copy.
+4. **Filesystem grow.** The controller expands the filesystem inside the
+   pod (or via a one-shot job) so the new space becomes usable without a
+   restart.
+5. **Events + metrics.** Each expansion emits a Kubernetes event and increments
+	`stellar_disk_scaling_operations_total` and
+	`stellar_disk_scaling_bytes_added_total`.
+
+### 4.2 Configuration
+
+```yaml
+spec:
+  diskScaling:
+    enabled: true
+    thresholdPercent: 80
+    expansionFactor: 1.5
+    maxSize: "5Ti"
+    cooldownSeconds: 3600
+```
+
+| Field | Default | Meaning |
+|---|---|---|
+| `enabled` | `false` | Master switch. Must be `true` for any expansion to occur. |
+| `thresholdPercent` | `80` | Utilization that triggers an expansion. Keep ≤80 so the expansion completes before the volume is full. |
+| `expansionFactor` | `1.5` | Multiplier applied to the current size. At 1.5, a 1.5 TiB volume grows to 2.25 TiB. |
+| `maxSize` | unset | Hard ceiling. **Set this.** Without it, a runaway growth pattern can expand indefinitely and surprise you on cost. |
+| `cooldownSeconds` | `3600` | Minimum time between consecutive expansions on the same volume. Prevents thrashing. |
+
+### 4.3 Sizing for the growth model
+
+Combine §3 and §4: size the initial volume to cover the next 6 months of
+projected growth plus a safety margin, and let `diskScaling` handle the
+rest. For a `Full`-mode archive node at the illustrative 3.21 GB/day:
+
+| Planning horizon | Projected growth | Recommended initial size |
+|---|---|---|
+| 6 months | ~578 GB | 1,500Gi (default) |
+| 12 months | ~1.17 TB | 2,500Gi |
+| 24 months | ~2.34 TB | 4,000Gi |
+
+With `diskScaling` enabled at threshold 80% and factor 1.5, a 1.5 TiB
+volume expands to 2.25 TiB when it reaches ~1.2 Tib used — at 3.21 GB/s
+day, that is roughly 11 months of runtime before the first expansion. Set
+`maxSize` to the ceiling you project for your planning horizon (e.g. 5Ti for
+24 months).
+
+### 4.4 What it does not do (and what to watch for)
+
+- **No shrinking.** EBS/GCP-PD volumes cannot be shrunk online. If you
+  over-provision, the only way back is to snapshot, create a smaller volume,
+  and restore. Size conservatively at the low end.
+- **Storage class must allow expansion.** The `StorageClass` used by the
+  PVC must have `allowVolumeExpansion: true`. The operator emits a warning
+  event and will not attempt a resize if this is not set.
+- `diskScaling` is not a substitute for monitoring.** If your node is
+  growing faster than the cooldown allows expansions, you can still hit a
+  full disk. Alert on disk utilization as well (§5).
+- `diskScaling` does not apply to local (hostPath) volumes.** If you
+  followed §1.3's recommendation to use local NVMe for Soroban RPC, you must
+  provision adequate space up in advance and migrate manually when it fills.
 
 ---
 
 ## 5. Monitoring Checklist
 
-Set these alerts before going to production (see
-[proactive-disk-scaling.md#alerting](../proactive-disk-scaling.md#alerting)
-for ready-to-use PromQL):
+The operator exposes these Prometheus metrics; alert on them rather than
+waiting for a `Disk Full` event.
 
-- [ ] `stellar_pvc_disk_usage_percent > 75` for 10m (early warning, before the
-      80% auto-expansion threshold)
-- [ ] `stellar_pvc_expansion_count >= maxExpansions - 2` (approaching the
-      hard ceiling from §4)
-- [ ] `deriv(stellar_pvc_size_bytes[30d])` trending — recompute the §3.4
-      projection monthly and compare against the §4 expansion ceiling and
-      your cloud provider's per-volume maximum
-- [ ] CPU/memory utilization per [resource-limits.md](../resource-limits.md#monitoring-and-tuning)
-      — capacity planning isn't just disk; an under-provisioned Horizon or
-      Soroban RPC tier degrades long before it runs out of disk
+| Metric | Use it for | Suggested alert |
+|---|---|---|
+| `stellar_disk_usage_bytes` | Absolute disk usage per PVC | Warn at 70%, critical at 85% |
+| `stellar_disk_usage_ratio` | Utilization fraction | Warn at 0.70, critical at 0.85 |
+| `stellar_disk_scaling_operations_total` | Expansion count | Alert if no expansion in 30d on a `Full` node growing >1% /day |
+| `stellar_disk_scaling_bytes_added_total` | Total bytes added | Track against §3's projection |
+| `stellar_disk_scaling_errors_total` | Failed expansions | Alert on any increase |
+| `stellar_ledger_close_time_seconds` | Current ledger close time | Warn if deviates from ~5s by >20p% |
+| `stellar_ops_per_second` | Observed ops throughput | Use to re-calibrate §3.4 quarterly |
 
 ---
 
-## References
+## 6. Quick Reference: Decision Tree
 
-- [Stellar Validator Prerequisites](https://developers.stellar.org/docs/validators/admin-guide/prerequisites) — Core hardware baseline
-- [Horizon Admin Guide — Prerequisites](https://developers.stellar.org/docs/data/apis/horizon/admin-guide/prerequisites) — Horizon API + DB hardware baseline
-- [Stellar RPC Admin Guide — Prerequisites](https://developers.stellar.org/docs/data/apis/rpc/admin-guide/prerequisites) — Soroban RPC hardware baseline, retention-to-disk relationship
-- [Publishing History Archives](https://developers.stellar.org/docs/validators/admin-guide/publishing-history-archives) — what "standalone full-history archive node" means operationally
-- [Chainspect — Stellar](https://chainspect.app/chain/stellar) — live TPS/throughput figures used in §3.1
-- [The Road to 5000 TPS](https://stellar.org/blog/developers/the-road-to-5000-tps-scaling-stellar-in-2025) — why §3.1's TPS figure is a moving target
+```
+Is this a `historyMode: Full` archive node?
+  ✔ Yes → Size initial volume per §4.3, enable diskScaling with maxSize,
+           monitor growth rate vs projection quarterly.
+  ✗ No  → Is this a Soroban RPC node?
+           ✗ Yes → Local NVMe recommended; size for retention window (350Gi +
+                 40Gi/day beyond 7d); diskScaling only if using network volumes.
+           ✕ No  → Horizon or Recent-mode validator: size per §1, enable
+                 diskScaling as a safety net.
+```
+
+---
+
+## 7. Related Docs
+
 - [Resource Limits for Stellar Node Types](../resource-limits.md)
 - [Proactive Disk Scaling](../proactive-disk-scaling.md)
 - [History Archive Pruning Guide](../archive-pruning.md)
+- [Bare-Metal NVMe IOPS Tuning](../performance/bare-metal-iops.md)

@@ -1,3 +1,15 @@
+// Copyright 2024 Stellar-K8s Contributors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //! # Governance Execution Queue & Proposal Registry
 //!
 //! A Soroban smart contract that implements an on-chain governance pipeline for
@@ -32,6 +44,8 @@
 
 mod execution;
 mod types;
+
+pub use types::{GovError, Proposal, ProposalStatus};
 
 #[cfg(test)]
 mod test;
@@ -91,6 +105,9 @@ impl GovQueueContract {
         if guardians.is_empty() {
             return Err(GovError::EmptyGuardianSet);
         }
+        if guardian_threshold == 0 || guardian_threshold > guardians.len() {
+            return Err(GovError::InvalidGuardianThreshold);
+        }
 
         admin.require_auth();
 
@@ -128,6 +145,9 @@ impl GovQueueContract {
         Self::require_admin(&env)?;
         if guardians.is_empty() {
             return Err(GovError::EmptyGuardianSet);
+        }
+        if threshold == 0 || threshold > guardians.len() {
+            return Err(GovError::InvalidGuardianThreshold);
         }
         env.storage().persistent().set(&DataKey::Guardians, &guardians);
         env.storage().persistent().set(&DataKey::GuardianThreshold, &threshold);
@@ -306,7 +326,8 @@ impl GovQueueContract {
     /// - `current_ledger >= proposal.earliest_execution_ledger`.
     ///
     /// If the target contract call fails the proposal is marked `Failed` and
-    /// the queue state is preserved intact.
+    /// committed as a terminal state; target-side writes are rolled back by
+    /// Soroban's failed sub-invocation.
     pub fn execute_proposal(env: Env, proposal_id: u64) -> Result<(), GovError> {
         let mut proposal = load_proposal(&env, proposal_id)?;
 
@@ -335,7 +356,6 @@ impl GovQueueContract {
                     proposal_id,
                 );
                 log!(&env, "proposal {} execution failed; marked Failed", proposal_id);
-                return Err(GovError::ExecutionFailed);
             }
         }
 

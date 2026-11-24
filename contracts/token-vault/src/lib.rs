@@ -1,12 +1,25 @@
 #![no_std]
+// Copyright 2024 Stellar-K8s Contributors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 pub mod error;
 #[cfg(test)]
 mod test;
 
-use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, Address, Env, String};
+use soroban_sdk::{
+    contract, contractimpl, contracttype, symbol_short, Address, Env, String,
+};
 
-/// Standardized default maximum gas limit enforced by contract execution guards.
 pub const DEFAULT_MAX_GAS_LIMIT: u64 = 50_000_000;
 pub const MAX_SUPPLY: i128 = i128::MAX;
 
@@ -70,30 +83,21 @@ fn ensure_not_paused(env: &Env) {
     assert!(!paused, "contract is paused");
 }
 
-/// Execution guard verifying that a requested gas limit does not exceed `DEFAULT_MAX_GAS_LIMIT`.
-pub fn ensure_gas_limit(gas_limit: u64) {
-    assert!(
-        gas_limit <= DEFAULT_MAX_GAS_LIMIT,
-        "gas limit exceeds default max limit"
-    );
-}
-
-/// Execution guard standardizing contract execution boundaries and checking pause status.
-fn ensure_execution_guard(env: &Env) {
-    ensure_not_paused(env);
-    ensure_gas_limit(DEFAULT_MAX_GAS_LIMIT);
-}
 
 #[contractimpl]
 impl TokenVault {
-    /// Initializes the token vault with administrative control and metadata.
+    /// Initializes the token vault with administrative control and token metadata.
+    ///
+    /// On success, stores the administrator, decimal precision, name, and symbol,
+    /// sets the vault to unpaused, and initializes the total supply to zero.
+    /// Initialization can only be performed once.
     ///
     /// # Arguments
     /// * `env` - The Soroban execution environment.
-    /// * `admin` - The address granted administrative privileges.
-    /// * `decimals` - Number of decimal places for the token.
+    /// * `admin` - The address granted administrative privileges; this address must authorize the call.
+    /// * `decimals` - Number of decimal places used to represent token amounts.
     /// * `name` - Descriptive name of the vault token.
-    /// * `symbol` - Ticker symbol for the token.
+
     pub fn initialize(env: Env, admin: Address, decimals: u32, name: String, symbol: String) {
         assert!(
             !env.storage().instance().has(&DataKey::Admin),
@@ -132,20 +136,7 @@ impl TokenVault {
         env.storage().instance().set(&DataKey::Paused, &paused);
     }
 
-    /// Returns the default maximum gas limit standardized across smart contract execution guards.
-    pub fn max_gas_limit(_env: Env) -> u64 {
-        DEFAULT_MAX_GAS_LIMIT
-    }
 
-    /// Execution guard validating whether a proposed gas limit is within default execution boundaries.
-    pub fn verify_gas_limit(_env: Env, gas_limit: u64) -> bool {
-        gas_limit <= DEFAULT_MAX_GAS_LIMIT
-    }
-
-    /// Execution guard asserting that the gas limit does not exceed standard boundaries.
-    pub fn check_gas_limit(_env: Env, gas_limit: u64) {
-        ensure_gas_limit(gas_limit);
-    }
 
     /// Mints new tokens to a designated recipient address.
     ///
@@ -155,7 +146,8 @@ impl TokenVault {
     /// * `amount` - Amount of tokens to mint (must be non-negative).
     pub fn mint(env: Env, to: Address, amount: i128) {
         require_amount(amount);
-        ensure_execution_guard(&env);
+        ensure_not_paused(&env);
+
         let admin: Address = env
             .storage()
             .instance()
@@ -234,11 +226,12 @@ impl TokenVault {
     /// leaving balances unchanged and emitting a transfer event.
     pub fn transfer(env: Env, from: Address, to: Address, amount: i128) {
         require_amount(amount);
-        ensure_execution_guard(&env);
+        ensure_not_paused(&env);
         from.require_auth();
 
         let from_balance = balance(&env, &from);
         assert!(from_balance >= amount, "insufficient balance");
+
 
         set_balance(&env, &from, from_balance - amount);
         set_balance(
@@ -254,7 +247,8 @@ impl TokenVault {
 
     pub fn transfer_from(env: Env, spender: Address, from: Address, to: Address, amount: i128) {
         require_amount(amount);
-        ensure_execution_guard(&env);
+        ensure_not_paused(&env);
+
         spender.require_auth();
         let data = allowance(&env, &from, &spender);
         assert!(
@@ -271,6 +265,7 @@ impl TokenVault {
         );
         let from_balance = balance(&env, &from);
         assert!(from_balance >= amount, "insufficient balance");
+
         set_balance(&env, &from, from_balance - amount);
         set_balance(
             &env,
@@ -285,10 +280,11 @@ impl TokenVault {
 
     pub fn burn(env: Env, from: Address, amount: i128) {
         require_amount(amount);
-        ensure_execution_guard(&env);
+        ensure_not_paused(&env);
         from.require_auth();
         let current = balance(&env, &from);
         assert!(current >= amount, "insufficient balance");
+
         set_balance(&env, &from, current - amount);
         let supply: i128 = env
             .storage()
@@ -299,5 +295,87 @@ impl TokenVault {
             .instance()
             .set(&DataKey::TotalSupply, &(supply - amount));
         env.events().publish((symbol_short!("burn"), from), amount);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use soroban_sdk::{testutils::Address as _, Address, Env, String};
+
+    fn setup() -> (Env, TokenVaultClient<'static>, Address, Address, Address, Address) {
+    fn setup() -> (
+        Env,
+        TokenVaultClient<'static>,
+        Address,
+        Address,
+        Address,
+        Address,
+    ) {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let admin = Address::generate(&env);
+        let alice = Address::generate(&env);
+        let bob = Address::generate(&env);
+        let spender = Address::generate(&env);
+
+        let contract_id = env.register(TokenVault, ());
+        let client = TokenVaultClient::new(&env, &contract_id);
+
+        client.initialize(
+            &admin,
+            &7,
+            &String::from_str(&env, "Token Vault"),
+            &String::from_str(&env, "TVLT"),
+        );
+
+        (env, client, admin, alice, bob, spender)
+    }
+
+    #[test]
+    #[should_panic(expected = "insufficient allowance")]
+    fn test_transfer_from_exhausted_allowance_panics() {
+        let (_env, client, _admin, alice, bob, spender) = setup();
+
+        // Mint initial tokens to alice
+        client.mint(&alice, &1000);
+        assert_eq!(client.balance(&alice), 1000);
+
+        // Alice approves spender for 100 tokens
+        client.approve(&alice, &spender, &100, &0);
+        assert_eq!(client.allowance(&alice, &spender), 100);
+
+        // Spender transfers the full approved amount (100 tokens) to bob
+        client.transfer_from(&spender, &alice, &bob, &100);
+        assert_eq!(client.balance(&alice), 900);
+        assert_eq!(client.balance(&bob), 100);
+
+        // Verify that the allowance is now completely exhausted (0 remaining)
+        assert_eq!(client.allowance(&alice, &spender), 0);
+
+        // Attempting to transfer more tokens when allowance is exhausted must safely revert
+        client.transfer_from(&spender, &alice, &bob, &1);
+    }
+
+    #[test]
+    #[should_panic(expected = "insufficient allowance")]
+    fn test_transfer_from_exceeds_remaining_allowance_panics() {
+        let (_env, client, _admin, alice, bob, spender) = setup();
+
+        client.mint(&alice, &1000);
+
+        // Alice approves spender for 100 tokens
+        client.approve(&alice, &spender, &100, &0);
+        assert_eq!(client.allowance(&alice, &spender), 100);
+
+        // Partial transfer of 60 tokens, leaving 40 allowance
+        client.transfer_from(&spender, &alice, &bob, &60);
+        assert_eq!(client.balance(&alice), 940);
+        assert_eq!(client.balance(&bob), 60);
+        assert_eq!(client.allowance(&alice, &spender), 40);
+
+        // Attempting to transfer 50 tokens (exceeding remaining allowance of 40) must safely revert
+        client.transfer_from(&spender, &alice, &bob, &50);
     }
 }

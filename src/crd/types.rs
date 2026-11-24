@@ -1,3 +1,15 @@
+// Copyright 2024 Stellar-K8s Contributors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //! Shared types for Stellar node specifications
 //!
 //! These types are used across the CRD definitions and controller logic.
@@ -509,6 +521,54 @@ pub struct BackupConfig {
 
 fn default_backup_ready_timeout_seconds() -> u64 {
     300
+}
+
+fn default_halt_on_csi_unavailable() -> bool {
+    true
+}
+
+/// Snapshot-based upgrade safety for Validator nodes.
+///
+/// When `enabled` is true the controller pauses the StatefulSet rollout, creates
+/// a CSI VolumeSnapshot of the data PVC, and only updates the container image
+/// after the snapshot reports `ReadyToUse`. Snapshot waits use reconcile
+/// requeues (no blocking Tokio sleep).
+#[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct UpgradeSafetyConfig {
+    /// Enable pre-upgrade PVC snapshot gating.
+    #[serde(default)]
+    pub enabled: bool,
+    /// VolumeSnapshotClass name. If unset, the default class for the PVC's driver is used.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub volume_snapshot_class_name: Option<String>,
+    /// Flush/lock the Stellar database before creating the snapshot.
+    #[serde(default)]
+    pub flush_before_snapshot: bool,
+    /// Maximum seconds to wait for ReadyToUse before failing the upgrade.
+    #[serde(default = "default_backup_ready_timeout_seconds")]
+    pub ready_timeout_seconds: u64,
+    /// Encrypt the snapshot with this Cloud KMS key reference.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub encryption_key_ref: Option<String>,
+    /// Halt the upgrade (and emit a Warning event) when the CSI snapshot driver is unavailable.
+    #[serde(default = "default_halt_on_csi_unavailable")]
+    pub halt_on_csi_unavailable: bool,
+}
+
+impl UpgradeSafetyConfig {
+    pub fn to_backup_config(&self) -> BackupConfig {
+        BackupConfig {
+            volume_snapshot_class_name: self.volume_snapshot_class_name.clone(),
+            flush_before_snapshot: self.flush_before_snapshot,
+            ready_timeout_seconds: if self.ready_timeout_seconds == 0 {
+                default_backup_ready_timeout_seconds()
+            } else {
+                self.ready_timeout_seconds
+            },
+            encryption_key_ref: self.encryption_key_ref.clone(),
+        }
+    }
 }
 
 /// Configuration to bootstrap a new node from an existing CSI VolumeSnapshot

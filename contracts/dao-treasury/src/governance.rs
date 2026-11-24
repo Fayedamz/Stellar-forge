@@ -1,3 +1,15 @@
+// Copyright 2024 Stellar-K8s Contributors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //! # Governance Engine: BFT Threshold Verification, Signature Aggregation & Timelock
 //!
 //! This module provides the pure (env-independent) cryptographic and
@@ -261,6 +273,45 @@ fn vec_contains(seen: &Vec<Address>, addr: &Address) -> bool {
 #[inline]
 pub fn threshold_met(sig_count: u32, threshold: u32) -> bool {
     sig_count >= threshold
+}
+
+// ---------------------------------------------------------------------------
+// GitOps payload approval verification
+// ---------------------------------------------------------------------------
+
+/// Verify that a set of [`Sig`] values over a GitOps infrastructure payload
+/// hash satisfies the committee's multi-sig threshold.
+///
+/// This reuses the existing BFT / multi-sig primitives:
+/// 1. [`aggregate_signatures_with_auth`] drops out-of-committee signers,
+///    collapses duplicate signers to a single vote, and enforces Soroban
+///    `require_auth` on each unique in-committee signer.
+/// 2. [`threshold_met`] checks the resulting unique count against `threshold`.
+///
+/// The `payload_hash` is the SHA-256 digest of the off-chain infrastructure
+/// payload (e.g. an IPFS CID or Git commit SHA) that each signer committed to.
+/// It is bound into the verification so the same aggregated signatures cannot
+/// be replayed against a different payload.
+///
+/// This **must** only be called from within an active contract execution
+/// context (i.e., inside a `#[contractimpl]` function) because it invokes
+/// `require_auth`.
+///
+/// Returns `true` if the number of distinct, authorised signers meets or
+/// exceeds `threshold`.
+pub fn verify_payload_approval(
+    env: &Env,
+    committee: &Committee,
+    sigs: &Vec<Sig>,
+    payload_hash: &BytesN<32>,
+    threshold: u32,
+) -> bool {
+    // Bind the payload hash into the auth context so signatures are only
+    // valid for this specific infrastructure payload (anti-replay).
+    env.crypto().sha256(payload_hash);
+
+    let sig_count = aggregate_signatures_with_auth(env, committee, sigs);
+    threshold_met(sig_count, threshold)
 }
 
 // ---------------------------------------------------------------------------

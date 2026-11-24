@@ -1,4 +1,16 @@
 #![no_std]
+// Copyright 2024 Stellar-K8s Contributors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 mod bridge_admin;
 
@@ -83,6 +95,8 @@ impl WrappedToken {
         env.storage().instance().set(&DataKey::TotalSupply, &0i128);
     }
 
+    /// Returns the configured bridge administrator address.
+    /// Panics if the contract has not been initialized.
     pub fn admin(env: Env) -> Address {
         env.storage()
             .instance()
@@ -90,6 +104,8 @@ impl WrappedToken {
             .expect("not initialized")
     }
 
+    /// Returns the address authorized to mint and burn wrapped tokens.
+    /// Panics if the contract has not been initialized.
     pub fn relayer(env: Env) -> Address {
         env.storage()
             .instance()
@@ -97,18 +113,25 @@ impl WrappedToken {
             .expect("not initialized")
     }
 
+    /// Returns whether contract transfers and minting are currently paused.
     pub fn paused(env: Env) -> bool {
         bridge_admin::is_paused(&env)
     }
 
+    /// Sets the authorized relayer to `relayer`.
+    /// Requires administrator authorization.
     pub fn set_relayer(env: Env, relayer: Address) {
         bridge_admin::set_relayer(&env, relayer);
     }
 
+    /// Pauses or resumes contract operations.
+    /// Requires administrator authorization.
     pub fn set_paused(env: Env, paused: bool) {
         bridge_admin::set_paused(&env, paused);
     }
 
+    /// Mints `amount` wrapped tokens to `to`.
+    /// Requires a non-negative amount, an unpaused contract, and relayer authorization.
     pub fn mint(env: Env, to: Address, amount: i128) {
         require_amount(amount);
         bridge_admin::ensure_not_paused(&env);
@@ -129,6 +152,7 @@ impl WrappedToken {
         env.events().publish((symbol_short!("mint"), to), amount);
     }
 
+    /// Returns the total number of wrapped tokens currently in circulation.
     pub fn total_supply(env: Env) -> i128 {
         env.storage()
             .instance()
@@ -139,6 +163,8 @@ impl WrappedToken {
 
 #[contractimpl]
 impl WrappedToken {
+    /// Returns `from`'s remaining allowance for `spender` at the current ledger.
+    /// Expired allowances return zero.
     pub fn allowance(env: Env, from: Address, spender: Address) -> i128 {
         let data = allowance(&env, &from, &spender);
         if data.live_until_ledger != 0 && data.live_until_ledger < env.ledger().sequence() {
@@ -148,6 +174,8 @@ impl WrappedToken {
         }
     }
 
+    /// Grants `spender` permission to spend `amount` from `from` until `live_until_ledger`.
+    /// Requires owner authorization and rejects negative or already-expired allowances.
     pub fn approve(
         env: Env,
         from: Address,
@@ -174,10 +202,13 @@ impl WrappedToken {
         );
     }
 
+    /// Returns the wrapped-token balance of `id`.
     pub fn balance(env: Env, id: Address) -> i128 {
         balance(&env, &id)
     }
 
+    /// Transfers `amount` from `from` to `to`.
+    /// Requires owner authorization, an unpaused contract, sufficient balance, and no overflow.
     pub fn transfer(env: Env, from: Address, to: MuxedAddress, amount: i128) {
         require_amount(amount);
         bridge_admin::ensure_not_paused(&env);
@@ -197,6 +228,8 @@ impl WrappedToken {
             .publish((symbol_short!("transfer"), from, to_address), amount);
     }
 
+    /// Transfers `amount` from `from` to `to` using `spender`'s allowance.
+    /// Requires spender authorization and sufficient allowance and source balance.
     pub fn transfer_from(env: Env, spender: Address, from: Address, to: Address, amount: i128) {
         require_amount(amount);
         bridge_admin::ensure_not_paused(&env);
@@ -228,6 +261,8 @@ impl WrappedToken {
             .publish((symbol_short!("transfer"), from, to), amount);
     }
 
+    /// Burns `amount` from `from` and decreases total supply.
+    /// Requires a non-negative amount, relayer authorization, and sufficient balance.
     pub fn burn(env: Env, from: Address, amount: i128) {
         require_amount(amount);
         bridge_admin::require_relayer(&env);
@@ -245,6 +280,8 @@ impl WrappedToken {
         env.events().publish((symbol_short!("burn"), from), amount);
     }
 
+    /// Burns `amount` from `from` using `spender`'s allowance.
+    /// Requires relayer authorization and sufficient allowance and source balance.
     pub fn burn_from(env: Env, spender: Address, from: Address, amount: i128) {
         require_amount(amount);
         bridge_admin::require_relayer(&env);
@@ -275,6 +312,8 @@ impl WrappedToken {
         env.events().publish((symbol_short!("burn"), from), amount);
     }
 
+    /// Returns the configured decimal precision.
+    /// Panics if the contract has not been initialized.
     pub fn decimals(env: Env) -> u32 {
         env.storage()
             .instance()
@@ -282,6 +321,8 @@ impl WrappedToken {
             .expect("not initialized")
     }
 
+    /// Returns the configured token name.
+    /// Panics if the contract has not been initialized.
     pub fn name(env: Env) -> String {
         env.storage()
             .instance()
@@ -289,6 +330,8 @@ impl WrappedToken {
             .expect("not initialized")
     }
 
+    /// Returns the configured token symbol.
+    /// Panics if the contract has not been initialized.
     pub fn symbol(env: Env) -> String {
         env.storage()
             .instance()

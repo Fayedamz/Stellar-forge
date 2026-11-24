@@ -5,7 +5,7 @@ edition = "2021"
 description = "Algorithmic stablecoin seigniorage controller for Soroban"
 license = "Apache-2.0"
 
-[library]
+[lib]
 crate-type = ["cdylib"]
 
 [dependencies]
@@ -13,7 +13,7 @@ soroban-sdk = { version = "21.0.0", features = ["alloc"] }
 sorban-token = { version = "21.0.0" }
 serde = { version = "1.0.200", features = ["derive"] }
 
-[depdevice-dependencies]
+[dev-dependencies]
 soroban-sdk = { version = "21.0.0", features = ["testutils"] }
 
 [profile.release]

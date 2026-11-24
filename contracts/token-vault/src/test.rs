@@ -1,6 +1,19 @@
 #![cfg(test)]
+// Copyright 2024 Stellar-K8s Contributors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-use super::{ensure_gas_limit, TokenVault, TokenVaultClient, DEFAULT_MAX_GAS_LIMIT};
+use super::{TokenVault, TokenVaultClient};
+
 use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
 fn setup() -> (Env, TokenVaultClient<'static>, Address, Address, Address) {
@@ -86,41 +99,6 @@ fn test_negative_amount_transfer_panics() {
 
     client.mint(&alice, &100);
     client.transfer(&alice, &bob, &-1);
-}
 
-#[test]
-fn test_default_max_gas_limit_constant() {
-    assert_eq!(DEFAULT_MAX_GAS_LIMIT, 50_000_000);
-}
 
-#[test]
-fn test_gas_limit_execution_guard_client() {
-    let (_env, client, _admin, _alice, _bob) = setup();
-
-    assert_eq!(client.max_gas_limit(), 50_000_000);
-    assert!(client.verify_gas_limit(&DEFAULT_MAX_GAS_LIMIT));
-    assert!(client.verify_gas_limit(&25_000_000));
-    assert!(!client.verify_gas_limit(&(DEFAULT_MAX_GAS_LIMIT + 1)));
-
-    client.check_gas_limit(&DEFAULT_MAX_GAS_LIMIT);
-    client.check_gas_limit(&1_000_000);
-}
-
-#[test]
-#[should_panic(expected = "gas limit exceeds default max limit")]
-fn test_gas_limit_execution_guard_client_panics_on_exceed() {
-    let (_env, client, _admin, _alice, _bob) = setup();
-    client.check_gas_limit(&(DEFAULT_MAX_GAS_LIMIT + 1));
-}
-
-#[test]
-fn test_ensure_gas_limit_helper() {
-    ensure_gas_limit(DEFAULT_MAX_GAS_LIMIT);
-    ensure_gas_limit(10_000_000);
-}
-
-#[test]
-#[should_panic(expected = "gas limit exceeds default max limit")]
-fn test_ensure_gas_limit_helper_panics_on_exceed() {
-    ensure_gas_limit(DEFAULT_MAX_GAS_LIMIT + 1);
 }

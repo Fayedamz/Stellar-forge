@@ -1,3 +1,15 @@
+// Copyright 2024 Stellar-K8s Contributors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //! Merkle proof verification for ledger state ingestion.
 //!
 //! This module provides a controller-facing interface for validating state
@@ -67,10 +79,60 @@ pub fn verify_merkle_proof(proof: &MerkleProof, leaf_hash: &Hash, expected_root:
 }
 
 /// Verifier for Stellar ledger state Merkle proofs.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct StateVerifier;
+///
+/// Holds the set of trusted validator public keys used to authenticate
+/// fast-sync proofs. The key set can be refreshed after a validator
+/// identity rotation so ingestion keeps validating without a restart.
+#[derive(Debug, Clone, Default)]
+pub struct StateVerifier {
+    trusted_keys: Vec<Hash>,
+}
 
 impl StateVerifier {
+    /// Creates a verifier with the given initial trusted validator keys.
+    pub fn new(trusted_keys: Vec<Hash>) -> Self {
+        Self { trusted_keys }
+    }
+
+    /// Returns the currently trusted validator keys.
+    pub fn trusted_keys(&self) -> &[Hash] {
+        &self.trusted_keys
+    }
+
+    /// Returns true if the given key is currently trusted.
+    pub fn is_trusted(&self, key: &Hash) -> bool {
+        self.trusted_keys.iter().any(|k| k == key)
+    }
+
+    /// Replaces the trusted validator key set, e.g. after a key rotation.
+    ///
+    /// This is intended to be called once the rotated identity has been
+    /// confirmed active so that ingestion continues validating proofs
+    /// signed by the new key set.
+    pub fn refresh_trusted_keys(&mut self, trusted_keys: Vec<Hash>) {
+        self.trusted_keys = trusted_keys;
+    }
+
+    /// Adds a single rotated validator key to the trusted set.
+    ///
+    /// Duplicate keys are ignored. Useful for staggered rotations where
+    /// nodes migrate one at a time and old keys must remain valid until
+    /// the rotation completes.
+    pub fn add_trusted_key(&mut self, key: Hash) {
+        if !self.is_trusted(&key) {
+            self.trusted_keys.push(key);
+        }
+    }
+
+    /// Removes a validator key from the trusted set.
+    ///
+    /// Returns true if the key was present and removed.
+    pub fn remove_trusted_key(&mut self, key: &Hash) -> bool {
+        let before = self.trusted_keys.len();
+        self.trusted_keys.retain(|k| k != key);
+        self.trusted_keys.len() != before
+    }
+
     /// Verifies a Merkle proof for the given serialized leaf data.
     pub fn verify_state_proof(
         &self,

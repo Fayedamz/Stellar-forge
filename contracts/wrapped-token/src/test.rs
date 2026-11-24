@@ -1,3 +1,15 @@
+// Copyright 2024 Stellar-K8s Contributors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 use super::{WrappedToken, WrappedTokenClient};
 use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
@@ -68,4 +80,20 @@ fn paused_token_rejects_transfer() {
     client.mint(&user, &1);
     client.set_paused(&true);
     client.transfer(&user, &user, &1);
+}
+
+#[test]
+fn zero_amount_transfer_is_handled_gracefully() {
+    let (env, contract_id, _admin, _relayer, user) = setup();
+    let client = WrappedTokenClient::new(&env, &contract_id);
+    let recipient = Address::generate(&env);
+
+    client.mint(&user, &100);
+    assert_eq!(client.balance(&user), 100);
+    assert_eq!(client.balance(&recipient), 0);
+
+    // Transferring 0 tokens should succeed gracefully leaving balances unchanged
+    client.transfer(&user, &recipient, &0);
+    assert_eq!(client.balance(&user), 100);
+    assert_eq!(client.balance(&recipient), 0);
 }

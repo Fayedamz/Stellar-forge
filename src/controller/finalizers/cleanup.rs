@@ -1,4 +1,16 @@
 // Copyright 2024 Stellar-K8s Contributors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// Copyright 2024 Stellar-K8s Contributors
 // Licensed under the Apache License, Version 2.0 (the "License")
 //! Kubernetes Finalizer Cleanup Recovery Controller for Orphaned Volumes.
 //!
@@ -85,22 +97,34 @@ pub enum CleanupOutcome {
 /// a [`CloudVerifier`] built with production or mock cloud checkers.
 ///
 /// ```rust,ignore
-/// tokio::spawn(run_finalizer_cleanup_controller(client.clone()));
+/// tokio::spawn(run_finalizer_cleanup_controller(
+///     client.clone(),
+///     Arc::new(AtomicBool::new(false)),
+/// ));
 /// ```
-pub async fn run_finalizer_cleanup_controller(client: Client) {
+pub async fn run_finalizer_cleanup_controller(
+    client: Client,
+    is_leader: std::sync::Arc<std::sync::atomic::AtomicBool>,
+) {
     let verifier = CloudVerifier::new(client.clone());
-    run_with_verifier(client, verifier).await;
+    run_with_verifier(client, verifier, is_leader).await;
 }
 
 /// Internal loop shared between production and test paths.
-pub async fn run_with_verifier(client: Client, verifier: CloudVerifier) {
+pub async fn run_with_verifier(
+    client: Client,
+    verifier: CloudVerifier,
+    is_leader: std::sync::Arc<std::sync::atomic::AtomicBool>,
+) {
     info!(
         interval_secs = SCAN_INTERVAL_SECS,
         "finalizer cleanup controller started"
     );
     loop {
-        if let Err(e) = scan_and_recover(&client, &verifier).await {
-            error!("finalizer cleanup scan error: {e}");
+        if is_leader.load(std::sync::atomic::Ordering::SeqCst) {
+            if let Err(e) = scan_and_recover(&client, &verifier).await {
+                error!("finalizer cleanup scan error: {e}");
+            }
         }
         tokio::time::sleep(Duration::from_secs(SCAN_INTERVAL_SECS)).await;
     }

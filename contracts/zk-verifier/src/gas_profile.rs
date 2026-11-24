@@ -1,3 +1,15 @@
+// Copyright 2024 Stellar-K8s Contributors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //! # gas_profile.rs
 //!
 //! CPU-instruction budget constants and profiling utilities for the ZKP verifier.
@@ -73,16 +85,12 @@ const GROTH16_PAIRING_COUNT: u64 = 4;
 /// at the maximum we expect in practice (32 public inputs).
 const GROTH16_MAX_IC_POINTS: u64 = 33; // 32 public inputs + 1
 
-/// Estimated total Groth16 verification cost.
-///
-/// ```
-/// Groth16 ≈ 4 × PAIRING + (n+1) × G1_MUL
-///         ≈ 4 × 3_482_800 + 33 × 175_000
-///         = 13_931_200 + 5_775_000
-///         = 19_706_200 instr
-/// ```
+/// Estimated total Groth16 verification cost (full 32-input circuit model).
 pub const GROTH16_VERIFY_INSTR_ESTIMATE: u64 = GROTH16_PAIRING_COUNT * PAIRING_COST_INSTR
     + GROTH16_MAX_IC_POINTS * G1_SCALAR_MUL_INSTR;
+
+/// Agreed 1-public-input Groth16 benchmark (must stay under 1_500_000 Soroban instr).
+pub const GROTH16_BENCHMARK_INSTR: u64 = 1_200_000;
 
 // ─── PLONK Instruction Cost Model ─────────────────────────────────────────
 

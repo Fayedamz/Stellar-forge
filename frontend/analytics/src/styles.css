@@ -45,6 +45,33 @@ select, .tool-button { min-height: 38px; border: 1px solid #344350; border-radiu
 .node-heading { padding: 22px 0 20px; }.node-heading code { display: block; overflow-wrap: anywhere; color: #7f92a3; font: 11px 'DM Mono', monospace; line-height: 1.5; }.node-status { display: inline-block; margin-bottom: 14px; padding: 4px 7px; border-radius: 3px; color: #07110d; font: 500 10px 'DM Mono', monospace; text-transform: uppercase; }.node-status.synced { background: #39d98a; }.node-status.degraded { background: #f5b942; }.node-status.falling-behind { background: #f05d5e; color: white; }
 .detail-list { margin: 0; border-top: 1px solid #273340; }.detail-row { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #273340; }.detail-row dt { color: #91a0ad; font-size: 12px; }.detail-row dd { margin: 0; color: #e8edf2; font: 12px 'DM Mono', monospace; text-align: right; }.inspector-note { margin-top: 18px; padding: 12px; border-left: 2px solid #f5b942; color: #aebbc6; font-size: 12px; line-height: 1.5; }
 
+/* Cluster metric anomaly workbench */
+.anomaly-workbench { margin-top: 18px; }
+.anomaly-toolbar { display: flex; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 16px; }
+.anomaly-toolbar h2 { margin: 6px 0 0; font-size: 28px; }
+.anomaly-toolbar__controls { display: flex; align-items: end; gap: 10px; }
+.anomaly-summary { min-height: 38px; display: inline-flex; align-items: center; padding: 0 12px; border: 1px solid #356b54; border-radius: 6px; color: #39d98a; background: #12231d; font: 500 11px 'DM Mono', monospace; }
+.anomaly-summary--alert { border-color: #7a4144; color: #ff8586; background: #2a1719; }
+.anomaly-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.anomaly-card { min-width: 0; border: 1px solid #273340; border-radius: 8px; background: #101923; overflow: hidden; transition: border-color 120ms ease, box-shadow 120ms ease; }
+.anomaly-card--alert { border-color: #a34b4d; box-shadow: inset 0 3px 0 #f05d5e; }
+.anomaly-card__header { display: flex; justify-content: space-between; align-items: start; gap: 12px; padding: 16px 16px 8px; }
+.anomaly-card__header > div { display: grid; gap: 5px; }
+.anomaly-card__label { color: #91a0ad; font-size: 12px; }
+.anomaly-card__header strong { font: 500 24px 'DM Mono', monospace; }
+.anomaly-card__status { padding: 5px 7px; border-radius: 4px; border: 1px solid #356b54; color: #39d98a; font: 500 10px 'DM Mono', monospace; text-transform: uppercase; white-space: nowrap; }
+.anomaly-card__status--alert { border-color: #8b4447; color: #ff8586; background: #2a1719; }
+.anomaly-card__chart { display: block; width: calc(100% - 32px); height: 78px; margin: 4px 16px 8px; }
+.anomaly-card__bounds { fill: #39d98a14; }
+.anomaly-card__baseline { stroke: #91a0ad; stroke-width: 1; stroke-dasharray: 4 4; }
+.anomaly-card__line { fill: none; stroke: #599ef2; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.anomaly-card__spike { fill: #f05d5e; stroke: #ffd0d1; stroke-width: 1.5; }
+.anomaly-card__footer { display: flex; justify-content: space-between; gap: 8px; padding: 10px 16px 12px; border-top: 1px solid #273340; color: #91a0ad; font: 10px 'DM Mono', monospace; }
+.topology-placeholder { margin-top: 18px; min-height: 360px; padding: 28px; border: 1px solid #273340; border-radius: 8px; background: #101923; }
+.topology-placeholder h2 { margin: 8px 0 6px; }
+
+@media (max-width: 980px) { .anomaly-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .anomaly-grid { grid-template-columns: 1fr; }.anomaly-toolbar { align-items: start; flex-direction: column; }.anomaly-toolbar__controls { width: 100%; justify-content: space-between; }.anomaly-card__footer { flex-direction: column; } }
 @media (max-width: 560px) { .metric-strip { grid-template-columns: repeat(2, 1fr); }.metric { padding: 16px 8px 16px 0; margin-right: 8px; }.metric strong { font-size: 21px; }.panel-heading { align-items: flex-start; flex-direction: column; justify-content: center; }.toolbar { flex-direction: column; }.scene-host { min-height: 320px; } }
 
 

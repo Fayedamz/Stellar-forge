@@ -111,7 +111,15 @@ where
             get(cpu_profile).route_layer(middleware::from_fn(auth::api_admin)),
         )
         .route(
+            "/debug/pprof/profile",
+            get(cpu_profile).route_layer(middleware::from_fn(auth::api_admin)),
+        )
+        .route(
             "/api/v1/debug/pprof/heap",
+            get(heap_profile).route_layer(middleware::from_fn(auth::api_admin)),
+        )
+        .route(
+            "/debug/pprof/heap",
             get(heap_profile).route_layer(middleware::from_fn(auth::api_admin)),
         )
 }
@@ -383,6 +391,7 @@ mod tests {
             retry_budget_nonretriable_secs: 60,
             retry_budget_max_attempts: 3,
             is_leader: Arc::new(AtomicBool::new(true)),
+            leader_readiness: Arc::new(AtomicBool::new(true)),
             event_reporter: kube::runtime::events::Reporter {
                 controller: "stellar-operator".into(),
                 instance: None,

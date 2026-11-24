@@ -1,3 +1,15 @@
+// Copyright 2024 Stellar-K8s Contributors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //! Tests for the reconciler module
 //!
 //! These tests verify the core reconciliation logic including:
@@ -54,6 +66,7 @@ mod tests {
             retry_budget_nonretriable_secs: 60,
             retry_budget_max_attempts: 3,
             is_leader: Arc::new(AtomicBool::new(true)),
+            leader_readiness: Arc::new(AtomicBool::new(true)),
             event_reporter: kube::runtime::events::Reporter {
                 controller: "stellar-operator".to_string(),
                 instance: None,
@@ -558,6 +571,28 @@ VALIDATORS=["VALIDATOR1", "VALIDATOR2"]"#
     }
 
     #[test]
+    #[test]
+    fn test_upgrade_safety_is_validator_only() {
+        let mut validator = create_test_validator_node("test-validator", "default");
+        validator.spec.upgrade_safety = Some(crate::crd::UpgradeSafetyConfig {
+            enabled: true,
+            volume_snapshot_class_name: Some("csi-fast".to_string()),
+            flush_before_snapshot: true,
+            ready_timeout_seconds: 90,
+            encryption_key_ref: None,
+            halt_on_csi_unavailable: true,
+        });
+        assert!(validator.spec.validate().is_ok());
+
+        let mut horizon = create_test_horizon_node("test-horizon", "default");
+        horizon.spec.upgrade_safety = Some(crate::crd::UpgradeSafetyConfig {
+            enabled: true,
+            ..Default::default()
+        });
+        assert!(horizon.spec.validate().is_err());
+    }
+
+    #[test]
     fn test_pre_upgrade_snapshot_name_is_sanitized() {
         let node = create_test_validator_node("validator-a", "default");
         let snapshot_name = build_pre_upgrade_snapshot_name(&node, "v22.0.1+build.5");
@@ -875,6 +910,131 @@ VALIDATORS=["VALIDATOR1", "VALIDATOR2"]"#
             for condition in &conditions {
                 prop_assert!(seen.insert(condition.type_.clone()));
             }
+        }
+    }
+
+    // ── Retry Duration and Backoff Math Tests ──────────────────────────────
+
+    #[test]
+    fn test_calculate_exponential_backoff_progression() {
+        // Base delay 10s, max 300s
+        assert_eq!(calculate_exponential_backoff(0, 10, 300), Duration::from_secs(10));
+        assert_eq!(calculate_exponential_backoff(1, 10, 300), Duration::from_secs(20));
+        assert_eq!(calculate_exponential_backoff(2, 10, 300), Duration::from_secs(40));
+        assert_eq!(calculate_exponential_backoff(3, 10, 300), Duration::from_secs(80));
+        assert_eq!(calculate_exponential_backoff(4, 10, 300), Duration::from_secs(160));
+        assert_eq!(calculate_exponential_backoff(5, 10, 300), Duration::from_secs(300)); // capped
+    }
+
+    #[test]
+    fn test_calculate_exponential_backoff_max_capping() {
+        // Any attempt past threshold should be clamped to max_secs
+        assert_eq!(calculate_exponential_backoff(5, 15, 100), Duration::from_secs(100));
+        assert_eq!(calculate_exponential_backoff(10, 15, 100), Duration::from_secs(100));
+        assert_eq!(calculate_exponential_backoff(30, 15, 100), Duration::from_secs(100));
+    }
+
+    #[test]
+    fn test_calculate_exponential_backoff_overflow_safety() {
+        // High attempt values should not panic or overflow
+        assert_eq!(calculate_exponential_backoff(63, 10, 500), Duration::from_secs(500));
+        assert_eq!(calculate_exponential_backoff(64, 10, 500), Duration::from_secs(500));
+        assert_eq!(calculate_exponential_backoff(u32::MAX, 10, 500), Duration::from_secs(500));
+        assert_eq!(calculate_exponential_backoff(10, u64::MAX, 500), Duration::from_secs(500));
+    }
+
+    #[test]
+    fn test_calculate_retry_duration_retriable_default_budget() {
+        let config = crate::controller::operator_config::ReconcilerConfig {
+            requeue_interval: 60,
+            error_backoff_base: 15,
+            max_backoff: 300,
+            enable_jitter: false,
+        };
+
+        // When retry_budget_retriable_secs is default (15), uses config backoff
+        assert_eq!(
+            calculate_retry_duration(true, 0, &config, 15, 60),
+            Duration::from_secs(15)
+        );
+        assert_eq!(
+            calculate_retry_duration(true, 1, &config, 15, 60),
+            Duration::from_secs(30)
+        );
+        assert_eq!(
+            calculate_retry_duration(true, 2, &config, 15, 60),
+            Duration::from_secs(60)
+        );
+        assert_eq!(
+            calculate_retry_duration(true, 5, &config, 15, 60),
+            Duration::from_secs(300)
+        );
+    }
+
+    #[test]
+    fn test_calculate_retry_duration_retriable_custom_budget() {
+        let config = crate::controller::operator_config::ReconcilerConfig {
+            requeue_interval: 60,
+            error_backoff_base: 15,
+            max_backoff: 300,
+            enable_jitter: false,
+        };
+
+        // When custom retry_budget_retriable_secs is set (e.g., 45), honors the explicit budget
+        assert_eq!(
+            calculate_retry_duration(true, 0, &config, 45, 60),
+            Duration::from_secs(45)
+        );
+        assert_eq!(
+            calculate_retry_duration(true, 3, &config, 45, 60),
+            Duration::from_secs(45)
+        );
+    }
+
+    #[test]
+    fn test_calculate_retry_duration_nonretriable() {
+        let config = crate::controller::operator_config::ReconcilerConfig {
+            requeue_interval: 60,
+            error_backoff_base: 15,
+            max_backoff: 300,
+            enable_jitter: false,
+        };
+
+        // Default non-retriable uses config.requeue_interval
+        assert_eq!(
+            calculate_retry_duration(false, 0, &config, 15, 60),
+            Duration::from_secs(60)
+        );
+        assert_eq!(
+            calculate_retry_duration(false, 5, &config, 15, 60),
+            Duration::from_secs(60)
+        );
+
+        // Custom non-retriable budget overrides
+        assert_eq!(
+            calculate_retry_duration(false, 0, &config, 15, 120),
+            Duration::from_secs(120)
+        );
+    }
+
+    #[test]
+    fn test_calculate_retry_duration_jitter_bounds() {
+        let config = crate::controller::operator_config::ReconcilerConfig {
+            requeue_interval: 60,
+            error_backoff_base: 20,
+            max_backoff: 300,
+            enable_jitter: true,
+        };
+
+        // Base for attempt 1 is 20 * 2^1 = 40.
+        // With jitter (0.5x to 1.5x), duration must be in [20, 60].
+        for _ in 0..20 {
+            let d = calculate_retry_duration(true, 1, &config, 15, 60);
+            assert!(
+                d.as_secs() >= 20 && d.as_secs() <= 60,
+                "Duration {:?} outside jitter bounds [20, 60]",
+                d
+            );
         }
     }
 }
