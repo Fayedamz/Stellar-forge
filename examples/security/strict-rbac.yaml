@@ -1,9 +1,10 @@
-# Strict least-privilege RBAC for Stellar-K8s.
+# Strict least-privilege RBAC and PSS profile for Stellar-K8s.
 #
 # Assumptions:
 #   operator namespace : stellar-system
 #   managed namespace  : stellar
 #   operator SA        : stellar-operator
+#   workload SA        : stellar-node
 #   operator binary    : stellar-k8s run --namespace=stellar-system --watch-namespace=stellar
 #
 # Apply with:
@@ -14,7 +15,7 @@
 #
 # See docs/security/rbac-hardening.md for the full permission rationale.
 
-# ─── 1. ServiceAccount ────────────────────────────────────────────────────────
+# ─── 1. Operator ServiceAccount ───────────────────────────────────────────────
 
 apiVersion: v1
 kind: ServiceAccount
@@ -25,16 +26,15 @@ metadata:
     app.kubernetes.io/name: stellar-operator
     app.kubernetes.io/component: controller
   annotations:
-    # Remove or replace this annotation if you are not using IRSA.
-    # When using IRSA, this SA must NOT also be used for ESO; give ESO its own SA.
+    # Remove or replace if not using IRSA. Never reuse this SA for ESO.
     # eks.amazonaws.com/role-arn: arn:aws:iam::000000000000:role/stellar-operator
-    description: "Stellar-K8s operator ServiceAccount — never share with workload pods"
-automountServiceAccountToken: false  # the operator mounts its own projected token
+    description: "Stellar-K8s operator ServiceAccount - never share with workload pods"
+automountServiceAccountToken: false  # Deployment mounts projected token explicitly
 
 ---
-# ─── 2. Role: managed workload namespace ─────────────────────────────────────
+# ─── 2. Role: managed workload namespace (stellar) ────────────────────────────
 #
-# Grants the minimum write access the reconciler needs inside "stellar".
+# Grants minimum write access the reconciler needs inside "stellar".
 # No Secret mutation. No RBAC writes. No pods/exec or pods/attach.
 
 apiVersion: rbac.authorization.k8s.io/v1
@@ -82,7 +82,7 @@ rules:
     verbs: ["get"]
   - apiGroups: [""]
     resources: ["pods/ephemeralcontainers"]
-    verbs: ["get", "update", "patch"]  # forensic-snapshot only — remove if break-glass is prohibited
+    verbs: ["get", "update", "patch"]  # forensic-snapshot only; omit if prohibited
 
   # ── Secrets: READ-ONLY — the operator never writes to Secrets ────────────────
   - apiGroups: [""]
@@ -94,7 +94,7 @@ rules:
     resources: ["networkpolicies", "ingresses"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 
-  # ── Availability ─────────────────────────────────────────────────────────────
+  # ── Availability and autoscaling ─────────────────────────────────────────────
   - apiGroups: ["policy"]
     resources: ["poddisruptionbudgets"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
@@ -106,8 +106,8 @@ rules:
     verbs: ["get", "patch", "delete"]
 
   # ── External Secrets Operator ────────────────────────────────────────────────
-  # The operator only applies/reads the ExternalSecret object. ESO writes
-  # the target Kubernetes Secret under its own ServiceAccount.
+  # Operator applies/reads ExternalSecret CRs; ESO writes target Secrets under
+  # its own ServiceAccount.
   - apiGroups: ["external-secrets.io"]
     resources: ["externalsecrets"]
     verbs: ["get", "patch"]
@@ -117,8 +117,8 @@ rules:
     resources: ["clusters", "poolers"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 
-  # ── Events ───────────────────────────────────────────────────────────────────
-  - apiGroups: [""]
+  # ── Events (core v1 + events.k8s.io/v1 Recorder) ─────────────────────────────
+  - apiGroups: ["", "events.k8s.io"]
     resources: ["events"]
     verbs: ["create", "patch"]
 
@@ -141,7 +141,7 @@ subjects:
     namespace: stellar-system
 
 ---
-# ─── 3. Role: operator namespace (stellar-system) ────────────────────────────
+# ─── 3. Role: operator namespace (stellar-system) ─────────────────────────────
 #
 # Minimum needed for in-process lifecycle: preflight, feature-flag watch,
 # leader election, and peer-discovery publication.
@@ -187,14 +187,14 @@ subjects:
 # ─── 4. ClusterRole: read-only cross-namespace observer ──────────────────────
 #
 # Required by stock binary paths that ignore --watch-namespace:
-#   • startup preflight lists all StellarNodes
-#   • PeerDiscoveryManager lists all StellarNodes + Service lookup
-#   • benchmark controller watches all StellarBenchmarks + Pods
-#   • snapshot worker lists all StellarNodes periodically
+#   - preflight, PeerDiscoveryManager, snapshot worker, finalizer cleanup,
+#     and QuorumOptimizer list all StellarNodes
+#   - benchmark controller watches all StellarBenchmarks + owned Pods
+#   - PeerDiscoveryManager looks up Services
+#   - NodeDrainOrchestrator watches Nodes; infra.rs reads Node hardware labels
 #
-# This ClusterRole grants ONLY the reads forced by those paths. It does NOT
-# grant cluster-wide benchmark writes, Secret reads, or workload creation.
-# See docs/security/rbac-hardening.md for the full architectural explanation.
+# Grants ONLY the reads forced by those paths. Does NOT grant cluster-wide
+# writes, Secret reads, Node patching, or Pod eviction.
 
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -216,6 +216,9 @@ rules:
   - apiGroups: [""]
     resources: ["services"]
     verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -237,12 +240,12 @@ subjects:
 ---
 # ─── 5. ClusterRole: named namespace and StorageClass access ─────────────────
 #
-# Namespace get: preflight reads the operator namespace; pss.rs reads and
-# patches the managed namespace label. The resource names are pinned so the
-# operator cannot read arbitrary namespace metadata.
+# Namespace get: preflight reads the operator namespace; pss.rs and
+# network_isolation.rs read the managed namespace; pss.rs patches PSS labels.
+# resourceNames pins access so arbitrary namespaces cannot be read or modified.
 #
 # StorageClass get: local-storage auto-detection probes exactly two names.
-# Remove this block if all nodes set spec.storage.storageClass explicitly.
+# Remove the storageclasses rule if all nodes set spec.storage.storageClass.
 
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -286,26 +289,24 @@ subjects:
 # ─── 6. Namespace PSS labels ─────────────────────────────────────────────────
 #
 # "stellar" workload namespace: enforce restricted to harden node pods.
-# "stellar-system" operator namespace: audit/warn only because the Helm chart
-#  currently does not satisfy every field required by restricted enforcement.
-#
-# Apply labels manually or via a Kyverno/Gatekeeper policy.
-# Do not rely on the operator to set its own namespace labels.
+# "stellar-system" operator namespace: audit/warn only because default Helm
+# podSecurityContext does not assert seccompProfile.type: RuntimeDefault.
 
 apiVersion: v1
 kind: Namespace
 metadata:
   name: stellar
   labels:
-    # Pod Security Admission — enforce restricted for workload pods
+    # Pod Security Admission - enforce restricted for workload pods
     pod-security.kubernetes.io/enforce: restricted
     pod-security.kubernetes.io/enforce-version: latest
     pod-security.kubernetes.io/audit: restricted
     pod-security.kubernetes.io/audit-version: latest
     pod-security.kubernetes.io/warn: restricted
     pod-security.kubernetes.io/warn-version: latest
-    # Network isolation label used by NetworkPolicy selectors
+    # Network isolation labels (set stellar.org/network to match spec.network)
     stellar.org/node-namespace: "true"
+    stellar.org/network: mainnet
 
 ---
 apiVersion: v1
@@ -313,7 +314,7 @@ kind: Namespace
 metadata:
   name: stellar-system
   labels:
-    # Operator namespace: audit and warn only (chart is not yet restricted-compliant)
+    # Operator namespace: audit and warn only
     pod-security.kubernetes.io/audit: restricted
     pod-security.kubernetes.io/audit-version: latest
     pod-security.kubernetes.io/warn: restricted
@@ -322,9 +323,8 @@ metadata:
 ---
 # ─── 7. Validator workload ServiceAccount ────────────────────────────────────
 #
-# Separate SA for the actual validator/horizon/soroban pods managed by the
-# operator. This SA must NOT be the same as stellar-operator; it is what Vault
-# and ESO bind their Kubernetes auth roles to.
+# Separate SA for validator/horizon/soroban pods managed by the operator.
+# Never reuse stellar-operator; bind Vault/IRSA workload roles to this SA.
 
 apiVersion: v1
 kind: ServiceAccount
@@ -335,15 +335,14 @@ metadata:
     app.kubernetes.io/name: stellar-node
     app.kubernetes.io/component: workload
   annotations:
-    description: "Workload ServiceAccount for Validator/Horizon/Soroban pods. Bind Vault/ESO roles to this SA, NOT to stellar-operator."
-automountServiceAccountToken: false  # operator mounts tokens explicitly when needed
+    description: "Workload SA for StellarNode pods; bind Vault/KMS roles here"
+automountServiceAccountToken: false  # mount projected token only when Vault/KMS auth needs it
 
 ---
-# ─── 8. Workload minimal Role ─────────────────────────────────────────────────
+# ─── 8. Workload minimal Role ────────────────────────────────────────────────
 #
-# Validator, Horizon, and Soroban RPC pods need no Kubernetes API access in
-# normal operation. This role is intentionally empty for node workloads.
-# It exists only to make the subject explicit and auditable.
+# Validator, Horizon, and Soroban RPC pods need zero Kubernetes API access in
+# normal operation. Empty rules make the boundary explicit and auditable.
 
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -353,7 +352,7 @@ metadata:
   labels:
     app.kubernetes.io/name: stellar-node
     app.kubernetes.io/component: rbac
-rules: []  # No API access for workload pods — principle of least privilege
+rules: []
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1

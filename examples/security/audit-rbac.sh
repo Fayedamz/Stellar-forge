@@ -4,9 +4,11 @@ set -euo pipefail
 OPERATOR_NAMESPACE="${OPERATOR_NAMESPACE:-stellar-system}"
 MANAGED_NAMESPACE="${MANAGED_NAMESPACE:-stellar}"
 SERVICE_ACCOUNT="${SERVICE_ACCOUNT:-stellar-operator}"
+WORKLOAD_SERVICE_ACCOUNT="${WORKLOAD_SERVICE_ACCOUNT:-stellar-node}"
 DEPLOYMENT_NAME="${DEPLOYMENT_NAME:-stellar-operator}"
 MANIFEST="${MANIFEST:-examples/security/strict-rbac.yaml}"
 AS="system:serviceaccount:${OPERATOR_NAMESPACE}:${SERVICE_ACCOUNT}"
+WORKLOAD_AS="system:serviceaccount:${MANAGED_NAMESPACE}:${WORKLOAD_SERVICE_ACCOUNT}"
 
 fail=0
 pass() { printf 'PASS  %s\n' "$*"; }
@@ -21,11 +23,11 @@ need() {
 need kubectl
 
 can_ns() {
-  kubectl auth can-i "$1" "$2" -n "$3" --as="$AS" 2>/dev/null
+  kubectl auth can-i "$1" "$2" -n "$3" --as="${4:-$AS}" 2>/dev/null
 }
 
 expect_yes_ns() {
-  if [[ "$(can_ns "$1" "$2" "$3")" == "yes" ]]; then
+  if [[ "$(can_ns "$1" "$2" "$3" "${4:-$AS}")" == "yes" ]]; then
     pass "$1 $2 in $3"
   else
     fail_check "expected ALLOW: $1 $2 in $3"
@@ -33,10 +35,11 @@ expect_yes_ns() {
 }
 
 expect_no_ns() {
-  if [[ "$(can_ns "$1" "$2" "$3")" == "no" ]]; then
-    pass "denied $1 $2 in $3"
+  local subject="${4:-$AS}"
+  if [[ "$(can_ns "$1" "$2" "$3" "$subject")" == "no" ]]; then
+    pass "denied $1 $2 in $3 ($subject)"
   else
-    fail_check "expected DENY: $1 $2 in $3"
+    fail_check "expected DENY: $1 $2 in $3 ($subject)"
   fi
 }
 
@@ -45,6 +48,14 @@ expect_yes_all() {
     pass "$1 $2 across all namespaces"
   else
     fail_check "expected ALLOW: $1 $2 across all namespaces"
+  fi
+}
+
+expect_yes_cluster() {
+  if kubectl auth can-i "$1" "$2" --as="$AS" 2>/dev/null | grep -qx yes; then
+    pass "cluster-scope $1 $2"
+  else
+    fail_check "expected ALLOW: cluster-scope $1 $2"
   fi
 }
 
@@ -74,6 +85,9 @@ expect_yes_ns get secrets "$MANAGED_NAMESPACE"
 expect_yes_ns create networkpolicies.networking.k8s.io "$MANAGED_NAMESPACE"
 expect_yes_ns create poddisruptionbudgets.policy "$MANAGED_NAMESPACE"
 expect_yes_ns create events "$MANAGED_NAMESPACE"
+expect_yes_ns patch events "$MANAGED_NAMESPACE"
+expect_yes_ns create events.events.k8s.io "$MANAGED_NAMESPACE"
+expect_yes_ns patch events.events.k8s.io "$MANAGED_NAMESPACE"
 
 echo "== Operator-namespace runtime permissions =="
 expect_yes_ns list deployments.apps "$OPERATOR_NAMESPACE"
@@ -90,6 +104,9 @@ expect_yes_all watch stellarbenchmarks.stellar.org
 expect_yes_all list pods
 expect_yes_all watch pods
 expect_yes_all get services
+expect_yes_cluster get nodes
+expect_yes_cluster list nodes
+expect_yes_cluster watch nodes
 
 if kubectl auth can-i get namespaces/"$OPERATOR_NAMESPACE" --as="$AS" 2>/dev/null | grep -qx yes; then
   pass "get namespace/$OPERATOR_NAMESPACE"
@@ -110,12 +127,20 @@ fi
 echo "== High-risk permissions that must remain denied =="
 expect_no_ns delete secrets "$MANAGED_NAMESPACE"
 expect_no_ns create secrets "$MANAGED_NAMESPACE"
+expect_no_ns patch secrets "$MANAGED_NAMESPACE"
 expect_no_ns create pods "$OPERATOR_NAMESPACE"
 expect_no_cluster create clusterroles.rbac.authorization.k8s.io
 expect_no_cluster create clusterrolebindings.rbac.authorization.k8s.io
 expect_no_cluster create namespaces
+expect_no_cluster patch nodes
+expect_no_cluster delete nodes
 expect_no_ns get secrets kube-system
 
+if kubectl auth can-i create pods --subresource=eviction -n "$MANAGED_NAMESPACE" --as="$AS" 2>/dev/null | grep -qx no; then
+  pass "denied create pods/eviction in $MANAGED_NAMESPACE"
+else
+  fail_check "expected DENY: create pods/eviction in $MANAGED_NAMESPACE"
+fi
 if kubectl auth can-i create pods --subresource=exec -n "$MANAGED_NAMESPACE" --as="$AS" 2>/dev/null | grep -qx no; then
   pass "denied create pods/exec in $MANAGED_NAMESPACE"
 else
@@ -143,6 +168,11 @@ if kubectl auth can-i patch stellarbenchmarks.stellar.org --subresource=status -
 else
   fail_check "expected DENY: cluster-wide StellarBenchmark status mutation"
 fi
+
+echo "== Workload ServiceAccount isolation =="
+expect_no_ns get secrets "$MANAGED_NAMESPACE" "$WORKLOAD_AS"
+expect_no_ns list pods "$MANAGED_NAMESPACE" "$WORKLOAD_AS"
+expect_no_ns get stellarnodes.stellar.org "$MANAGED_NAMESPACE" "$WORKLOAD_AS"
 
 echo "== Pod Security Admission =="
 cat <<'YAML' | kubectl apply --dry-run=server -n "$MANAGED_NAMESPACE" -f - >/dev/null

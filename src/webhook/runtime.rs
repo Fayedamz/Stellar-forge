@@ -185,11 +185,12 @@ impl WasmRuntime {
 
         // Execute in a blocking task to not block the async runtime
         let engine = self.engine.clone();
-        let (result_code, output_buffer, fuel_consumed) = tokio::task::spawn_blocking(move || {
-            Self::execute_sync(&engine, &module, input_json, &limits, "validate")
-        })
-        .await
-        .map_err(|e| Error::PluginError(format!("Plugin execution task failed: {e}")))??;
+        let (result_code, output_buffer, fuel_consumed, memory_used_bytes) =
+            tokio::task::spawn_blocking(move || {
+                Self::execute_sync(&engine, &module, input_json, &limits, "validate")
+            })
+            .await
+            .map_err(|e| Error::PluginError(format!("Plugin execution task failed: {e}")))??;
 
         let execution_time = start_time.elapsed();
 
@@ -209,7 +210,7 @@ impl WasmRuntime {
             plugin_name: plugin_name.to_string(),
             output,
             execution_time_ms: execution_time.as_millis() as u64,
-            memory_used_bytes: 0, // TODO(exempt: pending wasmtime memory API)
+            memory_used_bytes,
             fuel_consumed,
         })
     }
@@ -327,11 +328,12 @@ impl WasmRuntime {
 
         // Execute in a blocking task to not block the async runtime
         let engine = self.engine.clone();
-        let (result_code, output_buffer, fuel_consumed) = tokio::task::spawn_blocking(move || {
-            Self::execute_sync(&engine, &module, input_json, &limits, "process_trigger")
-        })
-        .await
-        .map_err(|e| Error::PluginError(format!("Plugin execution task failed: {e}")))??;
+        let (result_code, output_buffer, fuel_consumed, memory_used) =
+            tokio::task::spawn_blocking(move || {
+                Self::execute_sync(&engine, &module, input_json, &limits, "process_trigger")
+            })
+            .await
+            .map_err(|e| Error::PluginError(format!("Plugin execution task failed: {e}")))??;
 
         if result_code != 0 {
             return Err(Error::PluginError(format!(
@@ -347,7 +349,7 @@ impl WasmRuntime {
 
         Ok(ExecutionResult {
             output,
-            memory_used: 0,
+            memory_used,
             fuel_consumed,
             execution_time_ms: execution_time.as_millis() as u64,
         })
@@ -360,7 +362,7 @@ impl WasmRuntime {
         input_json: Vec<u8>,
         limits: &PluginLimits,
         func_name: &str,
-    ) -> Result<(i32, Vec<u8>, u64)> {
+    ) -> Result<(i32, Vec<u8>, u64, u64)> {
         // Create store with limits
         let _store_limits = StoreLimitsBuilder::new()
             .memory_size(limits.max_memory_bytes as usize)
@@ -415,6 +417,12 @@ impl WasmRuntime {
             }
         })?;
 
+        let memory = instance
+            .get_memory(&mut store, "memory")
+            .ok_or_else(|| Error::PluginError("Plugin does not export 'memory'".to_string()))?;
+        let memory_used_bytes = u64::try_from(memory.data_size(&store))
+            .map_err(|e| Error::PluginError(format!("Invalid Wasm memory size: {e}")))?;
+
         // Get fuel consumed
         let fuel_remaining = store.get_fuel().unwrap_or(0);
         let fuel_consumed = limits.max_fuel.saturating_sub(fuel_remaining);
@@ -423,7 +431,7 @@ impl WasmRuntime {
         let state = store.data();
         let output_buffer = state.output_buffer.clone();
 
-        Ok((result_code, output_buffer, fuel_consumed))
+        Ok((result_code, output_buffer, fuel_consumed, memory_used_bytes))
     }
 
     /// Add host functions for plugin I/O
@@ -650,6 +658,7 @@ impl Default for WasmRuntimeBuilder {
 
 #[cfg(test)]
 mod tests {
+    use super::super::types::{Operation, UserInfo};
     use super::*;
 
     #[test]
@@ -684,5 +693,48 @@ mod tests {
             .with_max_fuel(2_000_000)
             .build();
         assert!(runtime.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_execute_reports_memory_size_after_execution() {
+        // The module starts with one page and grows by one page in validate.
+        let wasm = [
+            0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, // header
+            0x01, 0x05, 0x01, 0x60, 0x00, 0x01, 0x7f, // (func () (result i32))
+            0x03, 0x02, 0x01, 0x00, // one function
+            0x05, 0x03, 0x01, 0x00, 0x01, // one-page memory
+            0x07, 0x15, 0x02, // exports
+            0x06, b'm', b'e', b'm', b'o', b'r', b'y', 0x02, 0x00, // memory
+            0x08, b'v', b'a', b'l', b'i', b'd', b'a', b't', b'e', 0x00, 0x00, // validate
+            0x0a, 0x0b, 0x01, 0x09, 0x00, 0x41, 0x01, 0x40, 0x00, 0x1a, 0x41, 0x00, 0x0b,
+        ];
+        let runtime = WasmRuntime::new().unwrap();
+        let metadata = PluginMetadata {
+            name: "memory-test".to_string(),
+            version: "1.0.0".to_string(),
+            description: None,
+            author: None,
+            sha256: None,
+            limits: PluginLimits::default(),
+        };
+        runtime.load_plugin(&wasm, metadata).await.unwrap();
+
+        let input = ValidationInput {
+            operation: Operation::Create,
+            object: None,
+            old_object: None,
+            namespace: "default".to_string(),
+            name: "example".to_string(),
+            user_info: UserInfo {
+                username: "test".to_string(),
+                uid: None,
+                groups: Vec::new(),
+                extra: std::collections::BTreeMap::new(),
+            },
+            context: std::collections::BTreeMap::new(),
+        };
+        let result = runtime.execute("memory-test", &input, None).await.unwrap();
+
+        assert_eq!(result.memory_used_bytes, 2 * 64 * 1024);
     }
 }

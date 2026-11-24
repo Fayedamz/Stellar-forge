@@ -1,6 +1,6 @@
 # Distributed Rate Limiting
 
-Issue #1335. Source: [`src/rest_api/gateway/distributed_ratelimit.rs`](https://github.com/OtowoOrg/Stellar-K8s/blob/main/src/rest_api/gateway/distributed_ratelimit.rs).
+Issue #1335. Source: [`src/rest_api/gateway/distributed_ratelimit.rs`](https://github.com/agnesnaomiolim-cloud/Stellar-forge/blob/main/src/rest_api/gateway/distributed_ratelimit.rs).
 
 ## The problem
 
@@ -103,7 +103,7 @@ For a single-replica deployment or local development, swap
 | `stellar_gateway_rate_limit_backend_errors_total` | Fail-open fallbacks |
 | `stellar_gateway_rate_limit_check_duration_seconds` | Check cost histogram |
 
-Alert rules: [`monitoring/rate-limit-alerts.yaml`](https://github.com/OtowoOrg/Stellar-K8s/blob/main/monitoring/rate-limit-alerts.yaml)
+Alert rules: [`monitoring/rate-limit-alerts.yaml`](https://github.com/agnesnaomiolim-cloud/Stellar-forge/blob/main/monitoring/rate-limit-alerts.yaml)
 
 ```bash
 kubectl apply -f monitoring/rate-limit-alerts.yaml -n monitoring

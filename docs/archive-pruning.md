@@ -542,7 +542,7 @@ INFO Pruning complete: 750 deleted, 0 errors
 ## Support
 
 For issues or questions about archive pruning:
-- Open an issue on [GitHub](https://github.com/OtowoOrg/Stellar-K8s/issues)
+- Open an issue on [GitHub](https://github.com/agnesnaomiolim-cloud/Stellar-forge/issues)
 - Check existing documentation in the `docs/` directory
 - Review error logs for detailed diagnostics
 

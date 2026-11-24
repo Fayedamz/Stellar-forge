@@ -377,5 +377,5 @@ receivers:
 ## Support
 
 For issues or questions:
-- GitHub Issues: https://github.com/OtowoOrg/Stellar-K8s/issues
-- Documentation: https://github.com/OtowoOrg/Stellar-K8s/tree/main/docs
+- GitHub Issues: https://github.com/agnesnaomiolim-cloud/Stellar-forge/issues
+- Documentation: https://github.com/agnesnaomiolim-cloud/Stellar-forge/tree/main/docs

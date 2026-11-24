@@ -3,7 +3,7 @@ name = "multisig-factory"
 version = "0.1.0"
 edition = "2021"
 publish = false
-description = "Multi-signature wallet factory for DAO treasury management on Soroban."
+description = "Multi-signature wallet factory for DAO treasury management on Soroban. See README.md for details."
 license = "Apache-2.0"
 
 [lib]

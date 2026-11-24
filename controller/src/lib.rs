@@ -19,7 +19,13 @@
 //!
 //! # Modules
 //!
-//! - [`apis`] — Custom resource validation and API schema utilities.
+//! - [`apis`] — Custom resource validation and API schema utilities,
+//!   including [`apis::AutoscalerSpec`] and [`apis::AutoscalerStatus`]
+//!   added by issue #471.
+//! - [`autoscaler`] — Soroban RPC Auto-Scaling Controller (#471).
+//!   Drives `spec.replicas` from pending RPC queue-length metrics with
+//!   integer-only scaling math, a scale-down stabilisation window, and
+//!   HPA co-existence guards.
 //! - [`deployment`] — StellarNode deployment pipeline, including the
 //!   [`deployment::optimizer`] WASM bytecode optimizer.
 //! - [`pdb`] — PodDisruptionBudget auto-tuning controller that keeps
@@ -31,6 +37,6 @@
 //!   orphaned finalizers without risking data loss.
 //! - [`quorum`] — Quorum-set graph analysis utilities.
 
-pub mod deployment;
-
+pub mod apis;
+pub mod autoscaler;
 pub mod quorum;

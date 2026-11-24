@@ -1,4 +1,16 @@
 #![allow(clippy::needless_pass_by_value)]
+// Copyright 2024 Stellar-K8s Contributors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Env, String, Symbol, Vec,
@@ -51,10 +63,13 @@ pub struct SnapshotAssertContract;
 
 #[contractimpl]
 impl SnapshotAssertContract {
+    /// Initializes the contract and records its instance state.
     pub fn __constructor(env: Env) {
         env.storage().instance().set(&symbol_short!("init"), &true);
     }
 
+    /// Registers `cluster_id` for snapshot submissions.
+    /// Returns `InvalidCluster` when the identifier is empty.
     pub fn register_cluster(env: Env, cluster_id: String) -> Result<(), SnapshotError> {
         if cluster_id.is_empty() {
             return Err(SnapshotError::InvalidCluster);
@@ -83,6 +98,8 @@ impl SnapshotAssertContract {
         Ok(())
     }
 
+    /// Stores a cluster's state root at `ledger_index` and compares all registered roots.
+    /// Returns the assertion status or `InvalidCluster`, `InvalidLedgerIndex`, or `MissingStateRoot` on failure.
     pub fn submit_snapshot(
         env: Env,
         cluster_id: String,
@@ -124,6 +141,7 @@ impl SnapshotAssertContract {
         })
     }
 
+    /// Returns the stored state-root entry for `cluster_id` at `ledger_index`, if submitted.
     pub fn get_snapshot_for_cluster(
         env: Env,
         ledger_index: u32,
@@ -135,6 +153,8 @@ impl SnapshotAssertContract {
             .get::<(u32, String), StateRootEntry>(&key)
     }
 
+    /// Compares state roots submitted for `ledger_index` across registered clusters.
+    /// Returns the comparison or `MissingStateRoot` when no cluster has submitted a root.
     pub fn compare_snapshot(
         env: Env,
         ledger_index: u32,

@@ -5,6 +5,151 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 
+
+## Chart v3.0.0 (2026-11-20) [major]
+
+
+
+
+## Chart v2.39.0 (2026-10-31) [minor]
+
+• Merge pull request #640 from Princeadim/feat/zk-verifier-bls12-381-groth16-323
+✨ feat(zk-verifier): BLS12-381 Groth16 pairing verifier with Miller loop optimisation (#323)
+🐛 fix(ci): resolve 16 failing CI checks in PR #640
+• - helm: fix {{- end } syntax error in scp-kafka-sidecar.yaml (line 37)
+• - deps: remove duplicate async-trait key from controller/Cargo.toml
+• - values: remove all duplicate top-level keys from values.yaml
+•   (scpAnalytics, horizonHpa x2, byzantineWatcher x2, gitopsSecrets,
+•   featureFlags, monitoring)
+• - docs: add Quickstart section to README.md
+• - ci: standardize action versions repo-wide
+•   (setup-python → @v5, build-push-action → @v7, metadata-action → @v6)
+• - yaml: add missing newlines to 4 chaos test files + rbac.yaml
+• - license: add Apache-2.0 headers to all 1091 applicable files
+📝 ci: include contracts/ in rust_core and deps change detection
+• The change detector only watched src/, Cargo.toml, Cargo.lock, etc. at
+• the repo root level. Changes under contracts/ (like the zk-verifier
+• BLS12-381 Groth16 work in #323) produced false for all eight outputs,
+• causing every downstream job — lint, test, benchmark-sanity-check,
+• security-audit, etc. — to be skipped instead of run.
+• Add contracts/ to rust_core and contracts/**/Cargo.(toml|lock) to deps
+• so any change under the contracts workspace triggers the correct jobs.
+✨ feat(zk-verifier): implement BLS12-381 Groth16 pairing verifier (#323)
+• - Add BLS12-381 scalar field order constant (Fr order r = 0x73eda753...)
+• - Add BLS12-381 base field prime constants (Fp split into high/low halves)
+•   to enable G1/G2 point coordinate range checks
+• - Add BLS12-381 G1 generator x-coordinate constant for reference
+• - Add NAF (Non-Adjacent Form) representation of BLS12-381 seed x for
+•   loop-unrolled Miller loop iteration (64-entry i8 array, sparse with <10
+•   non-zero digits)
+• - Retain BN254 constants for backward compatibility with existing proofs
+• - Enhance validate_g1_point() and validate_g2_point() with BLS12-381 base
+•   field range checks (rejects coordinates > 0x1a... boundary)
+• - Implement miller_loop_budget() that iterates the NAF constant and charges
+•   per-step costs (MILLER_STEP_DOUBLE_INSTR + optional MILLER_STEP_ADD_INSTR)
+•   — straight-line unrolled by the WASM compiler to eliminate branch overhead
+• - Implement final_exp_budget() for BLS12-381 final exponentiation (5.2M instr
+•   covering easy part + Fuentes-Castañeda hard part)
+• - Implement msm_budget() with Pippenger multi-exp adjusted cost (~250k/point)
+• - Update pairing_check_4() with multi-Miller optimisation: one miller loop
+•   + one final exp for all 4 pairs (saves ~15.6M instr vs 4 separate pairs)
+• - Add PROTOCOL-23-HOOK comment marking exact replacement point for
+•   env.crypto().bls12_381_g1g2_pairing_multi_check() once available
+• - 17 new unit tests covering constants, NAF properties, Miller/MSM budgets
+• - Add BLS12-381_FR_ORDER and BN254_FR_ORDER constants for sentinel rejection
+• - Add ALL_ONES_NULLIFIER sentinel constant (0xFF...FF is never a valid output)
+• - Implement validate_nullifier_format() checking: zero, all-0xFF, BLS12-381
+•   Fr order, BN254 Fr order — all rejected before storage lookup
+• - Call validate_nullifier_format() at the top of spend() so format errors
+•   are returned before the more expensive storage has() check
+• - Inline TTL extension directly in spend() at write time (was only in
+•   extend_nullifier_ttl(); now both code paths extend)
+• - Add TTL_WARNING_THRESHOLD constant (~116 days) for bumper services
+• - Add TTL_EXTEND_THRESHOLD and TTL_EXTEND_TO as named constants with docs
+• - Add batch_validate_unspent() for relayer pre-flight validation of batches
+• - Add TTL_WARNING_THRESHOLD public constant for external TTL bumper services
+• - 14 new unit tests covering format validation, spend lifecycle, TTL, batch ops
+• Closes #323
+
+
+## Chart v2.38.0 (2026-10-28) [minor]
+
+• Merge pull request #522 from supreme2580/feat/captive-core-supervisor
+✨ feat(captive): Captive Core process lifecycle supervisor with failure detection
+• Merge branch 'main' into feat/captive-core-supervisor
+• Merge pull request #444 from ifygreg01-best/feat/ingestion-ring-buffer-75
+✨ feat(ingestion): XDR ledger ring buffer & stream manager (#75)
+• Merge branch 'main' into feat/ingestion-ring-buffer-75
+✨ feat(captive): implement Captive Core process lifecycle supervisor
+✨ feat(ingestion): add XDR ledger ring buffer & stream manager (#75)
+• - controller/src/ingestion/buffer.rs: bounded LedgerBuffer with
+•   three configurable backpressure strategies (Block, DropNewest,
+•   DropOldest), atomic pushed/popped/dropped counters, and
+•   Notify-based producer/consumer wakeup
+• - controller/src/ingestion/worker.rs: LedgerProcessor async trait,
+•   ProducerPool + clonable ProducerHandle, ConsumerPool with N
+•   parallel worker tasks, WorkerPool builder facade, per-worker
+•   WorkerStats and PoolStats snapshots
+• - controller/src/ingestion/mod.rs: StreamManager high-level
+•   coordinator with StreamConfig (capacity, concurrency, strategy)
+• - controller/src/lib.rs: expose pub mod ingestion
+• - controller/Cargo.toml: add async-trait = "0.1" dependency
+• 18 tests across all three modules including a 10 000-frame
+• throughput benchmark validating the 10 000 ledgers/min requirement.
+
+
+## Chart v2.37.0 (2026-10-28) [minor]
+
+• Merge pull request #443 from Chidi-Dev1/feat/snapshot-controller-issue-243
+✨ feat(controller): add ephemeral storage snapshot controller (#243)
+• Merge branch 'main' into feat/snapshot-controller-issue-243
+• Merge branch 'main' into feat/snapshot-controller-issue-243
+✨ feat(controller): add ephemeral storage snapshot controller (#243)
+• Implements the full VolumeSnapshot lifecycle for Stellar validator PVCs
+• to enable near-instant horizontal scaling via storage cloning.
+• Changes:
+• - controller/src/snapshots/cloud_api.rs: SnapshotClient trait with AWS
+•   EBS and GCP Persistent Disk adapters (CreateSnapshot, DescribeSnapshots /
+•   disks.createSnapshot, snapshots.get), MockSnapshotClient for CI
+• - controller/src/snapshots/volume.rs: SnapshotController orchestrating
+•   fsync coordination with Stellar Core (stop-writes / resume-writes),
+•   cloud snapshot creation, ready-state polling, PVC clone spec generation
+•   (with stellar.org/* annotations), and sync verification (5-min deadline)
+• - controller/src/snapshots/mod.rs: module re-exports
+• - controller/src/lib.rs: expose snapshots module
+• - tests/snapshots_integration_test.rs: 15 integration tests covering full
+•   lifecycle, PVC clone spec correctness, concurrent requests, AWS/GCP
+•   client config validation, cloud error propagation, and cloud-provider
+•   display labels
+• All 48 controller unit + integration tests pass. Build is warning-free
+• for the snapshots module.
+• Closes #243
+
+
+## Chart v2.36.0 (2026-10-28) [minor]
+
+• Merge pull request #447 from DanielTobiDev/feat/issue-244-enhancement-real-time-configmap-hot-reloader
+✨ feat: add ConfigMap hot-reloader for core params
+• Merge pull request #639 from Chidi-Dev1/drips/4
+• Add bounded fail-open Wasm caching layer for Soroban RPC state reads
+✨ feat: add fail-open Wasm LRU cache for Soroban RPC state reads
+• Closes #4
+🐛 fix: resolve merge conflicts with base
+• Merge pull request #446 from notoflagosola-wq/feat/issue-242-safe-bucket-pruner
+✨ feat(controller): add safe local bucket pruning
+• Merge branch 'main' into feat/issue-242-safe-bucket-pruner
+• Merge branch 'main' into feat/issue-242-safe-bucket-pruner
+🐛 fix: resolve merge conflicts with base
+🐛 fix: resolve merge conflicts with base
+🐛 fix(ci): resolve failing checks for #447
+✨ feat: ## [Enhancement] Real-Time ConfigMap Hot-Reloader for Core P (#244)
+✨ feat(controller): add safe local bucket pruning
+• Add async local bucket scanning and retention planning with explicit safety snapshots, cooperative reader locks, and dry-run defaults. Document the limits of the current Core/Horizon integration.
+• Closes #242
+• Signed-off-by: ola196 <oladayoshola25@gmail.com>
+• Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+
 ## Chart v2.35.0 (2026-10-27) [minor]
 
 • Merge pull request #452 from Akindoyin538/simple/290-318-320-321
@@ -2742,7 +2887,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 • before any signature validation loop.
 • ### src/policy.rs
 • - ExecutionPolicy struct persisted in Instance Storage with four
-•   fields: max_allowed_fee_stroops, 	wap_oracle, eference_twap_price,
+•   fields: max_allowed_fee_stroops, 	wap_oracle, 
+eference_twap_price,
 •   max_price_deviation_bps
 • - DataKey enum covering Admin, Signers, Threshold, Policy, TxCounter,
 •   PendingTx(u64), Signatures(u64)
@@ -2761,7 +2907,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 • ### src/lib.rs
 • - SmartMultiSig contract with __constructor, propose_transfer,
 •   pprove, execute_transfer(caller, tx_id, current_fee_stroops),
-•   set_policy, otate_admin, and read-only view functions
+•   set_policy, 
+otate_admin, and read-only view functions
 • - Three-step execute pipeline: policy pre-check -> threshold -> dispatch
 • - Checks-effects-interactions: tx marked executed before external call
 • - #[contractevent] events for all state transitions

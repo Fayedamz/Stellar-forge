@@ -84,7 +84,7 @@ Content-Type: application/json
 
 {
   "error": "API version v1 has been sunset. Migrate to /api/v2.",
-  "migration_guide": "https://github.com/OtowoOrg/Stellar-K8s/blob/main/docs/api-versioning.md"
+  "migration_guide": "https://github.com/agnesnaomiolim-cloud/Stellar-forge/blob/main/docs/api-versioning.md"
 }
 ```
 

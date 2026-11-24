@@ -618,8 +618,8 @@ See [Archive Pruning](./archive-pruning.md) and [Proactive Disk Scaling](./proac
 
 ## Support Resources
 
-- **GitHub Issues**: [Stellar-K8s Issues](https://github.com/OtowoOrg/Stellar-K8s/issues)
-- **GitHub Discussions**: [Stellar-K8s Discussions](https://github.com/OtowoOrg/Stellar-K8s/discussions)
+- **GitHub Issues**: [Stellar-K8s Issues](https://github.com/agnesnaomiolim-cloud/Stellar-forge/issues)
+- **GitHub Discussions**: [Stellar-K8s Discussions](https://github.com/agnesnaomiolim-cloud/Stellar-forge/discussions)
 - **Stellar Developer Docs**: [developers.stellar.org](https://developers.stellar.org/)
 - **Kubernetes Documentation**: [kubernetes.io](https://kubernetes.io/)
 
@@ -627,4 +627,4 @@ See [Archive Pruning](./archive-pruning.md) and [Proactive Disk Scaling](./proac
 
 **Last Updated**: April 2026
 
-Have a question not covered here? Please open an issue on [GitHub](https://github.com/OtowoOrg/Stellar-K8s/issues) or start a discussion!
+Have a question not covered here? Please open an issue on [GitHub](https://github.com/agnesnaomiolim-cloud/Stellar-forge/issues) or start a discussion!

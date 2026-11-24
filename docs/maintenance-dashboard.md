@@ -9,9 +9,9 @@ running smoothly.
 ## Health Signals
 
 | Signal | Where to check | Healthy threshold |
-|--------|---------------|-------------------|
-| CI pipeline | [GitHub Actions](https://github.com/OtowoOrg/Stellar-K8s/actions/workflows/ci.yml) | All jobs green |
-| Test coverage | [Codecov](https://codecov.io/gh/OtowoOrg/Stellar-K8s) | ≥ 70% |
+|--------|---------------|------------------|
+| CI pipeline | [GitHub Actions](https://github.com/agnesnaomiolim-cloud/Stellar-forge/actions/workflows/ci.yml) | All jobs green |
+| Test coverage | [Codecov](https://codecov.io/gh/agnesnaomiolim-cloud/Stellar-forge) | ≥ 70% |
 | Dependency audit | `make audit` | 0 unsound advisories |
 | Stale artifacts | `make quick` | Exits 0 |
 | Docs drift | CI `api-docs` job | Job passes |
@@ -30,7 +30,7 @@ running smoothly.
 
 ### Monthly
 
-- [ ] Update Rust toolchain pin in CI (`1.9x` in `.github/actions/setup-rust`)
+- [ ] Update Rust toolchain pin CI (`1.9x` in `.github/actions/setup-rust`)
 - [ ] Update `stellar-core` / `horizon` / `soroban-rpc` version defaults in samples
 - [ ] Rotate any expiring tokens (Codecov, GHCR)
 - [ ] Review and merge Dependabot dependency updates per [dependency-updates.md](security/dependency-updates.md) (CI must be green)
@@ -89,13 +89,13 @@ cargo test stale_artifact_cleanup -- --nocapture
 Safety constraints enforced by the pruning worker:
 - Always retains ≥ `min_checkpoints` recent checkpoints
 - Never deletes within `max_age_days` of the latest checkpoint
-- Dry-run is enabled by default (`--force` required for actual deletion)
+- Dry-run is enabled by default (`force` required for actual deletion)
 
 ---
 
 ## Adding a New Maintainer
 
-1. Add to `.github/CODEOWNERS`
+1. Add to `.github/CODEOWNERS
 2. Grant "Maintain" role in GitHub repository settings
 3. Share this document and `CONTRIBUTING.md`
 4. Run `make dev-setup` to install toolchain and pre-commit hooks

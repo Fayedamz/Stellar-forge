@@ -1,6 +1,7 @@
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import TopologyScene from './TopologyScene.jsx';
+import AnomalyWorkbench from '../anomalies/AnomalyWorkbench.jsx';
 
 import { createStreamState, ingest, materialize, statusForNode } from './graphModel.js';
 
@@ -11,11 +12,11 @@ const query = new URLSearchParams(window.location.search);
 const sourceFromQuery = query.get('source');
 const bridgeUrl = query.get('ws') || 'localhost:8787';
 const initialSource = sourceFromQuery === 'mock' || sourceFromQuery === 'kafka' ? sourceFromQuery : 'live';
-const initialView = query.get('view') === 'heatmap' ? 'heatmap' : 'topology';
 const prometheusEndpoint = query.get('prom') || '/api/v1/query';
 
 // Tab driven by ?view= query param so links are shareable.
-const initialView = query.get('view') === 'heatmap' ? 'heatmap' : 'topology';
+const viewParam = query.get('view');
+const initialView = viewParam === 'topology' ? 'topology' : 'anomalies';
 
 function streamUrl(source) {
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -33,7 +34,7 @@ function App() {
   const [matrixCell, setMatrixCell] = useState(null);
   const [paused, setPaused] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
-  const [view, setView] = useState('graph');
+  const [view, setView] = useState(initialView);
   const [matrix, setMatrix] = useState(emptyMatrix());
   const [hoverCell, setHoverCell] = useState(null);
   const streamStateRef = useRef(createStreamState());
@@ -107,10 +108,21 @@ function App() {
       <header className="topbar">
         <div className="brand-block">
           <span className="eyebrow">STELLAR / OBSERVABILITY</span>
-
-
-
-
+          <h1>Cluster Analytics</h1>
+          <p>Operational signals and statistical baselines</p>
+        </div>
+        <nav className="view-switcher" aria-label="Analytics views">
+          <button type="button" className={`tool-button${view === 'anomalies' ? ' tool-button--active' : ''}`} onClick={() => setView('anomalies')}>Anomalies</button>
+          <button type="button" className={`tool-button${view === 'topology' ? ' tool-button--active' : ''}`} onClick={() => setView('topology')}>Topology</button>
+        </nav>
+      </header>
+      {view === 'anomalies' ? <AnomalyWorkbench /> : (
+        <section className="topology-placeholder">
+          <span className="eyebrow">TOPOLOGY</span>
+          <h2>Validator topology</h2>
+          <p className="muted">Topology telemetry is available when the validator stream is connected.</p>
+        </section>
+      )}
     </main>
   );
 }

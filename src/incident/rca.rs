@@ -91,13 +91,11 @@ impl RcaGenerator {
             },
             RcaSection {
                 title: "Root Cause".to_string(),
-                content: "TODO(exempt: template placeholder): Fill in root cause analysis based on collected evidence."
-                    .to_string(),
+                content: "Describe the underlying root cause supported by the collected evidence.".to_string(),
             },
             RcaSection {
                 title: "Contributing Factors".to_string(),
-                content: "TODO(exempt: template placeholder): List contributing factors identified during investigation."
-                    .to_string(),
+                content: "List the conditions or events that contributed to the incident.".to_string(),
             },
             RcaSection {
                 title: "Detection".to_string(),
@@ -120,7 +118,7 @@ impl RcaGenerator {
             },
             RcaSection {
                 title: "Lessons Learned".to_string(),
-                content: "TODO(exempt: template placeholder): Document lessons learned from this incident.".to_string(),
+                content: "Summarize key lessons learned and improvements for future incident prevention.".to_string(),
             },
         ];
 

@@ -45,7 +45,7 @@ expected to exhibit during active injection.
 ```
 
 The reference installation is exactly what CI runs nightly in
-[`chaos-tests.yml`](https://github.com/OtowoOrg/Stellar-K8s/blob/main/.github/workflows/chaos-tests.yml):
+[`chaos-tests.yml`](https://github.com/agnesnaomiolim-cloud/Stellar-forge/blob/main/.github/workflows/chaos-tests.yml):
 
 ```bash
 # 1. Chaos Mesh control plane (pinned chart version, containerd runtime)
@@ -83,7 +83,7 @@ EOF
 
 Pod selectors used by every experiment target the labels the operator itself
 puts on workload pods (see
-[`src/controller/resources.rs`](https://github.com/OtowoOrg/Stellar-K8s/blob/main/src/controller/resources.rs)):
+[`src/controller/resources.rs`](https://github.com/agnesnaomiolim-cloud/Stellar-forge/blob/main/src/controller/resources.rs)):
 
 | Selector | Matches |
 |----------|---------|
@@ -140,7 +140,7 @@ and are applied with `kubectl apply -f <file> -n chaos-testing`:
 > Note: the local runner `tests/chaos/run-chaos-tests.sh` currently executes
 > 01–10; 11–13 are CI-only (they run in chaos-tests.yml group D). The SLO
 > values above come from `default_slo_secs` in
-> [`src/controller/chaos_engineering.rs`](https://github.com/OtowoOrg/Stellar-K8s/blob/main/src/controller/chaos_engineering.rs).
+> [`src/controller/chaos_engineering.rs`](https://github.com/agnesnaomiolim-cloud/Stellar-forge/blob/main/src/controller/chaos_engineering.rs).
 
 Documentation-focused, reusable starting points live in `examples/chaos/`:
 
