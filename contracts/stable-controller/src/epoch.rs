@@ -11,10 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //! Epoch management for the seigniorage controller.
-///
-/// Epochs define the discrete time windows in which the controller may
-/// adjust supply. Rate-limiting is enforced here to prevent flash-crash
-/// spirals.
+//! Epochs define the discrete time windows in which the controller may
+//! adjust supply. Rate-limiting is enforced here to prevent flash-crash
+//! spirals.
 
 #![no_std]
 use sorban_sdk;

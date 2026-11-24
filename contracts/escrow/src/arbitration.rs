@@ -23,7 +23,7 @@ use crate::{DisputeOutcome, Escrow};
 ///
 /// Returns (buyer_amount, seller_amount).
 pub fn compute_split(escrow: &Escrow, outcome: &DisputeOutcome) -> (u128, u128) {
-    let net = escrow.amount - escrow\n        .fee;
+    let net = escrow.amount - escrow.fee;
     match outcome {
         DisputeOutcome::BuyerWins => (net, 0),
         DisputeOutcome::SellerWins => (0, net),
@@ -33,7 +33,7 @@ pub fn compute_split(escrow: &Escrow, outcome: &DisputeOutcome) -> (u128, u128) 
             // Must sum to 10000 bps (100%).
             // This is enforced at the contract boundary too, but we guard here as well.
             if buyer_bps + seller_bps != 10_000 {
-                panic!"Error:InvalidSplit");
+                panic!("Error:InvalidSplit");
             }
             let buyer_amount = (net * buyer_bps) / 10_000;
             let seller_amount = net - buyer_amount;

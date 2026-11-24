@@ -18,14 +18,14 @@ use soroban_sdk::{
         Address as TestAddress,
         Assert,
     },
-    token::{Client as TokenClient, Stellar:i:TokenClient as StellarAssetClient, Stellar:i:Wrapper, StellarAsset},
-    token::Stellar:i:AdminClient as StellarAdminClient,
+    token::{Client as TokenClient, StellarAssetClient},
 };
 
 fn create_token <'a>(
     env: &Env,
     admin: &Address,
-u ) -> Address {
+    _: bool,
+) -> Address {
     let sac = env.register_stellar_asset(&admin.clone(), &[]);
     sac.address
 

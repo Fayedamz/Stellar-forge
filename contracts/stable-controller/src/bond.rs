@@ -11,11 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //! Bond market for the seigniorage controller.
-///
-/// When the stablecoin price falls below the peg, the controller burns
-/// stablecoins and issues bond tokens at a discount. Bond holders can
-/// redeem their bonds for face value once the peg is restored, capturing
-/x// the discount as profit.
+//! When the stablecoin price falls below the peg, the controller burns
+//! stablecoins and issues bond tokens at a discount. Bond holders can
+//! redeem their bonds for face value once the peg is restored, capturing
+//! the discount as profit.
 
 #![no_std]
 use sorban_sdk;

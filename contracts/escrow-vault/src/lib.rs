@@ -63,6 +63,7 @@ impl Address {
         Address(bytes)
     }
 
+    /// Returns this address's 32-byte representation.
     pub fn to_bytes(&self) -> [u8; 32] {
         self.0
     }
@@ -248,10 +249,12 @@ pub struct TokenLedger {
 }
 
 impl TokenLedger {
+    /// Creates an empty token ledger.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Returns `addr`'s balance, or zero when the address has no ledger entry.
     pub fn balance_of(&self, addr: &Address) -> Amount {
         self.balances.get(addr).copied().unwrap_or(0)
     }
@@ -323,26 +326,32 @@ impl Vault {
         })
     }
 
+    /// Returns the vault's validated configuration.
     pub fn config(&self) -> &VaultConfig {
         &self.config
     }
 
+    /// Returns position `id`, or `None` if it does not exist.
     pub fn position(&self, id: u64) -> Option<&Position> {
         self.positions.get(&id)
     }
 
+    /// Iterates over all collateral positions; iteration order is unspecified.
     pub fn positions(&self) -> impl Iterator<Item = &Position> {
         self.positions.values()
     }
 
+    /// Returns collateral reserved for notifiers after confirmed slashes.
     pub fn slashed_reserve(&self) -> Amount {
         self.slashed_reserve
     }
 
+    /// Returns yield admitted to the pool but not yet distributed.
     pub fn yield_pool(&self) -> Amount {
         self.yield_pool
     }
 
+    /// Returns the vault's current token-ledger balance.
     pub fn token_balance(&self) -> Amount {
         self.ledger.balance_of(&vault_address())
     }

@@ -521,26 +521,32 @@ impl IndexBasket {
     // Views
     // -----------------------------------------------------------------------
 
+    /// Returns the address authorized to administer the basket.
     pub fn admin(env: Env) -> Address {
         read_admin(&env)
     }
 
+    /// Returns the basket's underlying components in configured order.
     pub fn components(env: Env) -> Vec<Component> {
         read_components(&env)
     }
 
+    /// Returns each component's tracked reserve in component order.
     pub fn reserves(env: Env) -> Vec<i128> {
         read_reserves(&env)
     }
 
+    /// Returns the total outstanding basket-token supply.
     pub fn total_supply(env: Env) -> i128 {
         token::total_supply(&env)
     }
 
+    /// Returns the configured oracle, staleness bound, and rebalance incentive.
     pub fn rebalance_params(env: Env) -> RebalanceParams {
         read_params(&env)
     }
 
+    /// Returns whether `arbitrageur` is currently allow-listed to rebalance.
     pub fn is_arbitrageur(env: Env, arbitrageur: Address) -> bool {
         env.storage()
             .persistent()

@@ -134,6 +134,9 @@ fn from_host(v: &U256) -> ethnum::U256 {
 
 #[contractimpl]
 impl ClAmm {
+    /// Initializes the pool admin and asset configuration. `token0`/`token1`
+    /// identify ordered assets; `fee` is in 1e-6 units and `tick_spacing` sets
+    /// supported tick increments. Invalid ordering, fee, or spacing aborts construction.
     pub fn __constructor(
         env: Env,
         admin: Address,
@@ -184,10 +187,12 @@ impl ClAmm {
         tick
     }
 
+    /// Returns the pool's token, fee, and tick-spacing configuration.
     pub fn config(env: Env) -> PoolConfig {
         env.storage().instance().get(&DataKey::Config).unwrap()
     }
 
+    /// Returns the initialized price and tick, or `None` before initialization.
     pub fn slot0(env: Env) -> Option<Slot0> {
         env.storage().instance().get(&DataKey::Slot0)
     }

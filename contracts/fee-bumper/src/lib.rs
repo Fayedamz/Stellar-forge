@@ -32,6 +32,8 @@ pub struct FeeBumper;
 
 #[contractimpl]
 impl FeeBumper {
+    /// Stores the initial admin, fee-bump cap, reimbursement token, and rate
+    /// limit (`rate_limit` calls per `rate_window` ledgers).
     pub fn initialize(
         env: Env,
         admin: Address,
@@ -50,6 +52,8 @@ impl FeeBumper {
         store_config(&env, &config);
     }
 
+    /// Checks the inner transaction bytes and offered fee against the required
+    /// reserve; returns `INVALID_TX` or `UNDERFUNDED` when validation fails.
     pub fn validate_inner_tx(
         env: Env,
         inner_tx_bytes: Bytes,
@@ -58,6 +62,9 @@ impl FeeBumper {
         relayer::validate_inner_tx(&env, &inner_tx_bytes, fee_offered)
     }
 
+    /// Validates `inner_tx_bytes` for `account` using `max_fee`, then checks
+    /// replay and rate limits and records `base_fee` plus the configured cap.
+    /// Returns the transaction hash and fee, or an error for invalid or blocked requests.
     pub fn wrap_fee_bump(
         env: Env,
         account: Address,
@@ -83,14 +90,19 @@ impl FeeBumper {
         })
     }
 
+    /// Claims `account`'s accrued reimbursement, returning the amount (zero if
+    /// none is recorded).
     pub fn claim_reimbursement(env: Env, account: Address) -> Result<u64, Error> {
         relayer::claim_reimbursement(&env, &account)
     }
 
+    /// Checks and records one call for `account`; returns `RATE_LIMIT_EXCEEDED`
+    /// if its configured window has reached the limit.
     pub fn check_rate_limit(env: Env, account: Address) -> Result<(), Error> {
         relayer::check_rate_limit(&env, &account)
     }
 
+    /// Sets the maximum calls per rate window; requires authorization from the admin.
     pub fn set_rate_limit(env: Env, new_limit: u64) {
         let config = get_config(&env);
         config.admin.require_auth();
@@ -99,6 +111,7 @@ impl FeeBumper {
         store_config(&env, &updated);
     }
 
+    /// Sets the maximum fee-bump amount; requires authorization from the admin.
     pub fn set_fee_cap(env: Env, new_cap: u64) {
         let config = get_config(&env);
         config.admin.require_auth();
@@ -107,6 +120,8 @@ impl FeeBumper {
         store_config(&env, &updated);
     }
 
+    /// Returns the stored relayer configuration; panics if the contract is not
+    /// initialized.
     pub fn get_config(env: Env) -> RelayerConfig {
         relayer::get_config(&env)
     }
