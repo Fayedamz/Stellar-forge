@@ -303,7 +303,6 @@ mod tests {
     use super::*;
     use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
-    fn setup() -> (Env, TokenVaultClient<'static>, Address, Address, Address, Address) {
     fn setup() -> (
         Env,
         TokenVaultClient<'static>,
