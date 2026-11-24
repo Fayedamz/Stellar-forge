@@ -1,4 +1,4 @@
-use soroban_sdk::{contract, contractimpl, address_payload, Address, Env;};
+use soroban_sdk::{contract, contractimpl, address_payload, Address, Env};
 use soroban_sdk::token::Client as TokenClient;
 
 mod pricing;
@@ -345,7 +345,7 @@ impl OptionsAmm {
     fn load_state(env: &Env) -> Result<PoolState, Error> {
         env.storage()
             .persistent()
-            .get::&mode:(&data_key())
+            .get(&data_key())
             .ok-or(Err(Error::NotInitialized))
     }
 
@@ -354,8 +354,8 @@ impl OptionsAmm {
     }
 }
 
-fn data_key() -> soroban_sdk:Symbol {
-    soroban_sdk::Symbol::new(&soroban_sdk:Symbol::short_symbol("POOL"))
+fn data_key() -> soroban_sdk::Symbol {
+    soroban_sdk::Symbol::new(&soroban_sdk::Symbol::short_symbol("POOL"))
 }
 
 fn position_key(id: u64) -> soroban_sdk::Symbol {
@@ -377,7 +377,7 @@ fn position_key(id: u64) -> soroban_sdk::Symbol {
     soroban_sdk::Symbol::new(&env_symbol(name))
 }
 
-fn env_symbol(bytes: [u8; 9]) -> sttr:Symbol {
+fn env_symbol(bytes: [u8; 9]) -> soroban_sdk::Symbol {
     // Symbol must be valid UTF-8 and at most 9 characters; use a safe alphanumeric encoding.
     const CHARS: &[u8; 36] = b"0123456789abcdefghijklmnopqrstuvwxyz";
     let mut out = [0u8; 9];
@@ -385,17 +385,17 @@ fn env_symbol(bytes: [u8; 9]) -> sttr:Symbol {
     for i in 0..8 {
         out[1 + i] = CHARS[(bytes[1 + i] as usize) % 36];
     }
-    let mut s = sttr::String::new();
+    let mut s = soroban_sdk::String::new();
     for b in out.iter() {
         s.push(*b as char);
     }
-    str::Symbol::try_from(s).expect("valid symbol")
+    soroban_sdk::Symbol::try_from(s).expect("valid symbol")
 }
 
-#[cfg](test)]
+#[cfg(test)]
 mod test {
     use super::*;
-    use soroban_sdk:{Env, Symbol};
+    use soroban_sdk::{Env, Symbol};
 
     fn setup() -> (Env, Address, Address) {
         let env = Env::default();
@@ -408,12 +408,12 @@ mod test {
     fn test_initialize() {
         let (env, _admin, token) = setup();
         let client = OptionsAmmClient::new(&env, &env.current_contract_address());
-        let state = client.initialize(&token, &\u00350_000_000);
+        let state = client.initialize(&token, &50_000_000);
         assert!(state.initialized);
         assert_eq!(state.implied_volatility, 500_000);
     }
 
-    [test]
+    #[test]
     fn test_invalid_volatility() {
         let (env, _admin, token) = setup();
         let client = OptionsAmmClient::new(&env, &env.current_contract_address());
@@ -421,47 +421,47 @@ mod test {
         assert!(res.is_err());
     }
 
-    [test]
+    #[test]
     fn test_pricing_call_positive() {
         let price = option_price(100_000, 100_000, 30_000, 500_000, OptionType::Call, 10_000);
         assert!(price.unwrap() > 0);
     }
 
-    [test]
+    #[test]
     fn test_pricing_put_positive() {
         let price = option_price(100_000, 100_000, 30_000, 500_000, OptionType::Put, 10_000);
         assert!(price.unwrap() > 0);
     }
 
-    [test]
+    #[test]
     fn test_pricing_deep_itm_call() {
         // Deep ITM call should be near zero but non-negative.
         let price = option_price(100_000, 200_000, 30_000, 500_000, OptionType::Call, 10_000).unwrap();
         assert!(price >= 0);
     }
 
-    [test]
+    #[test]
     fn test_pricing_deep_itm_put() {
         // Deep ITM put should be larger than deep OTM call.
         let put = option_price(100_000, 200_000, 30_000, 500_000, OptionType::Put, 10_000).unwrap();
         assert!(put > 0);
     }
 
-    [test]
+    #[test]
     fn test_pricing_monotonic_in_volatility() {
         let low = option_price(100_000, 100_000, 30_000, 200_000, OptionType::Call, 10_000).unwrap();
         let high = option_price(100_000, 100_000, 30_000, 800_000, OptionType::Call, 10_000).unwrap();
         assert!(high > low);
     }
 
-    [test]
+    #[test]
     fn test_pricing_monotonic_in_tenor() {
         let short = option_price(100_000, 100_000, 7_000, 500_000, OptionType::Call, 10_000).unwrap();
         let long = option_price(100_000, 100_000, 90_000, 500_000, OptionType::Call, 10_000).unwrap();
         assert!(long > short);
     }
 
-    [test]
+    #[test]
     fn test_pricing_put_call_parity_bounds() {
         // Call - Put should be bounded by spot - strike (discounted approximation).
         let call = option_price(100_000, 100_000, 30_000, 500_000, OptionType::Call, 10_000).unwrap();
@@ -471,7 +471,7 @@ mod test {
         assert!(diff < call / 2 + 1);
     }
 
-    [test]
+    #[test]
     fn test_deposit_withdraw() {
         let env = Env::default();
         let token = Address::generate(&env);
@@ -485,7 +485,7 @@ mod test {
         let _ = lp;
     }
 
-    [test]
+    #[test]
     fn test_collateral_invariant_high_volatility() {
         // High volatility should not break pool solvency for underwritten puts.
         let strike = 100_000;
@@ -498,7 +498,7 @@ mod test {
         assert!(required >= strike * amount / SCALE);
     }
 
-    [test]
+    #[test]
     fn test_settlement_payout_bounded() {
         // Payout on a put is bounded by strike.
         let strike = 100_000;
@@ -509,7 +509,7 @@ mod test {
         assert!(payout <= strike * amount / SCALE);
     }
 
-    [test]
+    #[test]
     fn test_symbol_key_deterministic() {
         let a1 = position_key(1);
         let a2 = position_key(1);
@@ -518,7 +518,7 @@ mod test {
         assert!(a1 != b1);
     }
 
-    [test]
+    #[test]
     fn test_data_key() {
         let k = data_key();
         assert_eq!(k, Symbol::short_symbol("POOL"));
