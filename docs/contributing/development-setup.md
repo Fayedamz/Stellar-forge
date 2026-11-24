@@ -13,8 +13,8 @@ Learn how to set up a local development environment for building and testing Ste
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/OtowoOrg/Stellar-K8s.git
-cd Stellar-K8s
+git clone https://github.com/agnesnaomiolim-cloud/Stellar-forge.git
+cd Stellar-forge
 ```
 
 ### 2. Install Dependencies
@@ -250,7 +250,7 @@ pip install --force-reinstall mkdocs-material
 
 - Documentation Testing
 - Documentation Standards
-- [Contribute to Stellar-K8s](https://github.com/OtowoOrg/Stellar-K8s/blob/main/CONTRIBUTING.md)
+- [Contribute to Stellar-K8s](https://github.com/agnesnaomiolim-cloud/Stellar-forge/blob/main/CONTRIBUTING.md)
 
 !!! success "Ready to Contribute!"
     Your development environment is set up. Start writing documentation and submit a pull request!

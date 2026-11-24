@@ -140,7 +140,7 @@ Place this in `renovate.json` at the repository root and remove
 
 ## Verification
 
-- Dependabot PRs appear in the [Pull Requests](https://github.com/OtowoOrg/Stellar-K8s/pulls?q=is%3Apr+author%3Aapp%2Fdependabot)
+- Dependabot PRs appear in the [Pull Requests](https://github.com/agnesnaomiolim-cloud/Stellar-forge/pulls?q=is%3Apr+author%3Aapp%2Fdependabot)
   tab weekly.
 - Each PR shows a green CI badge before merging.
 - The `DEPENDENCY_SECURITY_AUDIT.md` document is regenerated on every release.
