@@ -649,38 +649,47 @@ impl DaoTreasury {
     // Queries
     // -----------------------------------------------------------------------
 
+    /// Returns the address authorized to administer the treasury.
     pub fn admin(env: Env) -> Address {
         env.storage().instance().get(&KEY_ADMIN).unwrap()
     }
 
+    /// Returns the token contract whose assets are held by the treasury.
     pub fn token(env: Env) -> Address {
         env.storage().instance().get(&KEY_TOKEN).unwrap()
     }
 
+    /// Returns the current authorized signer committee.
     pub fn committee(env: Env) -> Committee {
         env.storage().instance().get(&KEY_COMMITTEE).unwrap()
     }
 
+    /// Returns the number of unique signatures required to execute proposals.
     pub fn threshold(env: Env) -> u32 {
         env.storage().instance().get(&KEY_THRESHOLD).unwrap()
     }
 
+    /// Returns the required ledger delay before queued configuration changes apply.
     pub fn timelock_delay(env: Env) -> u32 {
         env.storage().instance().get(&KEY_TIMELOCK).unwrap()
     }
 
+    /// Returns the nonce used to prevent replay of executed proposal signatures.
     pub fn nonce(env: Env) -> u64 {
         env.storage().instance().get(&KEY_NONCE).unwrap()
     }
 
+    /// Returns the number of proposals created so far.
     pub fn proposal_count(env: Env) -> u32 {
         env.storage().instance().get(&KEY_PROP_CT).unwrap_or(0)
     }
 
+    /// Returns the proposal with `proposal_id`, or `None` if it is not stored.
     pub fn get_proposal(env: Env, proposal_id: u32) -> Option<Proposal> {
         env.storage().instance().get(&(KEY_PROP, proposal_id))
     }
 
+    /// Returns the queued committee/threshold change, or `None` if none is pending.
     pub fn pending_change(env: Env) -> Option<PendingChange> {
         env.storage().instance().get(&KEY_PENDING)
     }

@@ -166,6 +166,8 @@ impl GovernanceVote {
     // Admin configuration
     // ------------------------------------------------------------------
 
+    /// Replaces the administrator with `new_admin`; requires authorization from
+    /// the current administrator.
     pub fn set_admin(env: Env, new_admin: Address) {
         admin(&env).require_auth();
         env.storage().instance().set(&INSTANCE_ADMIN, &new_admin);
@@ -454,10 +456,12 @@ impl GovernanceVote {
     // Queries
     // ------------------------------------------------------------------
 
+    /// Returns the currently configured administrator.
     pub fn admin(env: Env) -> Address {
         admin(&env)
     }
 
+    /// Returns the total voting weight used to calculate quorum.
     pub fn total_weight(env: Env) -> i128 {
         env.storage()
             .instance()
@@ -465,6 +469,7 @@ impl GovernanceVote {
             .unwrap()
     }
 
+    /// Returns the required participation ratio in basis points.
     pub fn quorum_percent_bps(env: Env) -> u32 {
         env.storage()
             .instance()
@@ -472,10 +477,13 @@ impl GovernanceVote {
             .unwrap()
     }
 
+    /// Returns the extra ledger horizon before an abandoned active proposal
+    /// can be expired.
     pub fn expiration_horizon(env: Env) -> u32 {
         env.storage().instance().get(&INSTANCE_HORIZON).unwrap()
     }
 
+    /// Returns the number of proposals created so far.
     pub fn proposal_count(env: Env) -> u32 {
         env.storage().instance().get(&INSTANCE_COUNT).unwrap_or(0)
     }
@@ -488,10 +496,12 @@ impl GovernanceVote {
         quorum_threshold(total_weight, bps)
     }
 
+    /// Returns proposal `proposal_id`, or `None` if it has not been stored.
     pub fn get_proposal(env: Env, proposal_id: u32) -> Option<Proposal> {
         env.storage().instance().get(&(KEY_PROPOSAL, proposal_id))
     }
 
+    /// Returns `voter`'s ballot on `proposal_id`, or `None` if they have not voted.
     pub fn get_vote(env: Env, proposal_id: u32, voter: Address) -> Option<Ballot> {
         env.storage()
             .persistent()

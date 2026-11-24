@@ -10,4 +10,144 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-Ly8hIFRXQVAgb3JhY2xlIGludGVncmF0aW9uIGZvciB0aGUgc2VpZ25pb3JhZ2UgY29udHJvbGxlci4KLy8vCi8vLyBUaGUgb3JhY2xlIG1haW50YWlucyBhIHJvbGxpbmcgd2luZG93IG9mIHByaWNlIG9ic2VydmF0aW9ucyBhbmQKLy8vIGNvbXB1dGVzIGEgdGltZS13ZWlnaHRlZCBhdmVyYWdlIHByaWNlIChUV0FQKSB0byBzbW9vdGggb3V0IHNob3J0LXRlcm0KLy8vIHZvbGF0aWxpdHkgYW5kIGZsYXNoLWNyYXNoIG5vaXNlLgoKIyFbbm9fc3RkXQp1c2Ugc29yYmFuX3NkazsKCnVzZSBzb3JiYW5fc2RrOjp7Y29udHJhY3R0eXBlLCBzeW1ib2xfc2hvcnRfc3RyaW5nfTsKCi8vLyBNYXhpbXVtIG51bWJlciBvZiBvYnNlcnZhdGlvbnMgcmV0YWluZWQgaW4gdGhlIHJpbmcgYnVmZmVyLgpjb25zdCBNQVhfT0JTRVJWQVRJT05TOiB1MzIgPSAxMjg7CgovLy8gQSBzaW5nbGUgb3JhY2xlIG9ic2VydmF0aW9uLgojW3NvcmJhbl9jb250cmFjdHR5cGVdCiNbZGVyaXZlKENsb25lLCBEZWJ1ZywgUGFydGlhbEVxKV0KcHViIHN0cnVjdCBPYnNlcnZhdGlvbiB7CiAgICAvLy8gTGVkZ2VyIHNlcXVlbmNlIGF0IHdoaWNoIHRoZSBvYnNlcnZhdGlvbiB3YXMgbWFkZS4KICAgIHB1YiBsZWRnZXI6IHUzMiwKICAgIC8vLyBQcmljZSBpbiBzdHJvcHMgKDcgZGVjaW1hbHMpLgogICAgcHViIHByaWNlOiBpMTI4LAp9CgovLy8gVFdBUCBvcmFjbGUgd2l0aCBhIHJpbmcgYnVmZmVyIG9mIG9ic2VydmF0aW9ucy4KI1tzb3JiYW5fY29udHJhY3R0eXBlXQojW2Rlcml2ZShDbG9uZSwgRGVidWcsIFBhcnRpYWxFcSldCnB1YiBzdHJ1Y3QgVHdhcE9yYWNsZSB7CiAgICAvLy8gUmluZyBidWZmZXIgb2Ygb2JzZXJ2YXRpb25zLgogICAgcHViIG9ic2VydmF0aW9uczogc29yYmFuX3Nkazo6VmVjPE9ic2VydmF0aW9uPiwKICAgIC8vLyBOdW1iZXIgb2Ygb2JzZXJ2YXRpb25zIGN1cnJlbnRseSBzdG9yZWQuCiAgICBwdWIgY291bnQ6IHUzMiwKICAgIC8vLyBOZXh0IGluZGV4IGZvciB3cml0aW5nLgogICAgcHViIG5leHRfaWR4OiB1MzIsCiAgICAvLy8gVFdBUCB3aW5kb3cgaW4gbGVkZ2VzLgogICAgcHViIHdpbmRvdzogdTMyLAp9CgppbXBsIFR3YXBPcmFjbGUgewogICAgLy8vIENyZWF0ZSBhIG5ldyBUV0FQIG9yYWNsZSB3aXRoIHRoZSBnaXZlbiB3aW5kb3cuCiAgICBwdWIgZm4gbmV3KHdpbmRvdzogdTMyKSAtPiBTZWxmIHsKICAgICAgICBTZWxmIHsKICAgICAgICAgICAgb2JzZXJ2YXRpb25zOiBzb3JiYW5fc2RrOjpWZWM6Om5ldygmRW52OjpkZWZhdWx0KCkpLAogICAgICAgICAgICBjb3VudDogMCwKICAgICAgICAgICAgbmV4dF9pZHg6IDAsCiAgICAgICAgICAgIHdpbmRvdywKICAgICAgICB9CiAgICB9CgogICAgLy8vIFJlY29yZCBhIG5ldyBvYnNlcnZhdGlvbi4KICAgIHB1YiBmbiByZWNvcmQoJm11dCBzZWxmLCBsZWRnZXI6IHUzMiwgcHJpY2U6IGkxMjgpIHsKICAgICAgICBsZXQgb2JzID0gT2JzZXJ2YXRpb24geyBsZWRnZXIsIHByaWNlIH07CiAgICAgICAgaWYgc2VsZi5jb3VudCA8IE1BWF9PQlNFUlZBVElPTlMgewogICAgICAgICAgICBzZWxmLm9ic2VydmF0aW9ucy5wdXNoX2JhY2soJm9icyk7CiAgICAgICAgICAgIHNlbGYuY291bnQgKz0gMTsKICAgICAgICAgICAgc2VsZi5uZXh0X2lkeCA9IHNlbGYuY291bnQgJSBNQVhfT0JTRVJWQVRJT05TOwogICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAgIHNlbGYub2JzZXJ2YXRpb25zLnNldChzZWxmLm5leHRfaWR4LCAmb2JzKTsKICAgICAgICAgICAgc2VsZi5uZXh0X2lkeCA9IChzZWxmLm5leHRfaWR4ICsgMSkgJSBNQVhfT0JTRVJWQVRJT05TOwogICAgICAgIH0KICAgIH0KCiAgICAvLy8gUmVtb3ZlIG9ic2VydmF0aW9ucyBvbGRlciB0aGFuIHRoZSB3aW5kb3cuCiAgICBwdWIgZm4gcHJ1bmUoJm11dCBzZWxmLCBjdXJyZW50X2xlZGdlcjogdTMyKSB7CiAgICAgICAgbGV0IGN1dG9mZiA9IGN1cnJlbnRfbGVkZ2VyLnNhdHVyYXRpbmdfc3ViKHNlbGYud2luZG93KTsKICAgICAgICBsZXQgbXV0IGtlZXA6IHNvcmJhbl9zZGs6OlZlYzxPYnNlcnZhdGlvbj4gPSBzb3JiYW5fc2RrOjpWZWM6Om5ldygmRW52OjpkZWZhdWx0KCkpOwogICAgICAgIGZvciBpIGluIDAuLnNlbGYub2JzZXJ2YXRpb25zLmxlbigpIHsKICAgICAgICAgICAgaWYgbGV0IFNvbWUobykID0gc2VsZi5vYnNlcnZhdGlvbnMuZ2V0KGkpIHsKICAgICAgICAgICAgICAgIGlmIG8ubGVkZ2VyID49IGN1dG9mZiB7CiAgICAgICAgICAgICAgICAgICAga2VlcC5wdXNoX2JhY2soJm8pOwogICAgICAgICAgICAgICAgfQogICAgICAgICAgICB9CiAgICAgICAgfQogICAgICAgIHNlbGYuY291bnQgPSBrZWVwLmxlbigpOwogICAgICAgIHNlbGYubmV4dF9pZHggPSBzZWxmLmNvdW50ICUgTUFYX09CU0VSVkFUSU9OUzsKICAgICAgICBzZWxmLm9ic2VydmF0aW9ucyA9IGtlZXA7CiAgICB9CgogICAgLy8vIENvbXB1dGUgdGhlIFRXQVAgb3ZlciB0aGUgY3VycmVudCB3aW5kb3cuCiAgICAvLy eightKQogICAgLy8gVXNlcyB0aW1lLXdlaWdodGVkIGF2ZXJhZ2Ugb2Ygb2JzZXJ2YXRpb25zIGJhc2VkIG9uIGxlZGdlciBkdXJhdGlvbi4KICAgIHB1YiBmbiB0d2FwKCZzZWxmKSAtPiBPcHRpb248aTEyOD4gewogICAgICAgIGlmIHNlbGYuY291bnQgPT0gMCB7CiAgICAgICAgICAgIHJldHVybiBOb25lOwogICAgICAgIH0KICAgICAgICBpZiBzZWxmLmNvdW50ID09IDEgewogICAgICAgICAgICByZXR1cm4gc2VsZi5vYnNlcnZhdGlvbnMuZ2V0KDApLm1hcCh8b3wgb3AucHJpY2UpOwogICAgICAgIH0KCiAgICAgICAgLy8gU29ydCBvYnNlcnZhdGlvbnMgYnkgbGVkZ2VyIGFzY2VuZGluZy4KICAgICAgICBsZXQgbXV0IHNvcnRlZDogc29yYmFuX3Nkazo6VmVjPE9ic2VydmF0aW9uPiA9IHNvcmJhbl9zZGs6OlZlYzo6bmV3KCZFbnY6OmRlZmF1bHQoKSk7CiAgICAgICAgZm9yIGkgaW4gMC4uc2VsZi5vYnNlcnZhdGlvbnMubGVuKCkgewogICAgICAgICAgICBpZiBsZXQgU29tZShvKSA9IHNlbGYub2JzZXJ2YXRpb25zLmdldChpKSB7CiAgICAgICAgICAgICAgICBzb3J0ZWQucHVzaF9iYWNrKCZvKTsKICAgICAgICAgICAgfQogICAgICAgIH0KICAgICAgICAvLyBJbnNlcnRpb24gc29ydCAoc21hbGwgTikKICAgICAgICBmb3IgaSBpbiAxLi5zb3J0ZWQubGVuKCkgewogICAgICAgICAgICBsZXQga2V5ID0gc29ydGVkLmdldChpKS51bndyYXAoKTsKICAgICAgICAgICAgbGV0IG11dCBqID0gaTsKICAgICAgICAgICAgd2hpbGUgaiA+IDAgewogICAgICAgICAgICAgICAgbGV0IHByZXYgPSBzb3J0ZWQuZ2V0KGogLSAxKS51bndyYXAoKTsKICAgICAgICAgICAgICAgIGlmIHByZXYubGVkZ2VyID4ga2V5LmxlZGdlciB7CiAgICAgICAgICAgICAgICAgICAgc29ydGVkLnNldChqLCAmcHJldik7CiAgICAgICAgICAgICAgICAgICAgaiAtPSAxOwogICAgICAgICAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgICAgICAgICBicmVhazsKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfQogICAgICAgICAgICBzb3J0ZWQuc2V0KGosICZrZXkpOwogICAgICAgIH0KCiAgICAgICAgLy8gQ29tcHV0ZSB0aW1lLXdlaWdodGVkIGF2ZXJhZ2UuCiAgICAgICAgbGV0IG11dCB3ZWlnaHRlZF9zdW06IGkxMjggPSAwOwogICAgICAgIGxldCBtdXQgdG90YWxfd2VpZ2h0OiBpMTI4ID0gMDsKICAgICAgICBmb3IgaSBpbiAwLi4oc29ydGVkLmxlbigpIC0gMSkgewogICAgICAgICAgICBsZXQgY3VyciA9IHNvcnRlZC5nZXQoaSkudW53cmFwKCk7CiAgICAgICAgICAgIGxldCBuZXh0ID0gc29ydGVkLmdldChpICsgMSkudW53cmFwKCk7CiAgICAgICAgICAgIGxldCBkdCA9IChuZXh0LmxlZGdlciAtIGN1cnIubGVkZ2VyKSBhcyBpMTI4OwogICAgICAgICAgICBpZiBkdCA+IDAgewogICAgICAgICAgICAgICAgd2VpZ2h0ZWRfc3VtICs9IGN1cnIucHJpY2UgKiBkdDsKICAgICAgICAgICAgICAgIHRvdGFsX3dlaWdodCArPSBkdDsKICAgICAgICAgICAgfQogICAgICAgIH0KICAgICAgICAvLyBBZGQgdGhlIGxhc3Qgb2JzZXJ2YXRpb24gd2l0aCB3ZWlnaHQgMS4KICAgICAgICBpZiBsZXQgU29tZShsYXN0KSA9IHNvcnRlZC5nZXQoc29ydGVkLmxlbigpIC0gMSkgewogICAgICAgICAgICB3ZWlnaHRlZF9zdW0gKz0gbGFzdC5wcmljZTsKICAgICAgICAgICAgdG90YWxfd2VpZ2h0ICs9IDE7CiAgICAgICAgfQogICAgICAgIGlmIHRvdGFsX3dlaWdodCA9PSAwIHsKICAgICAgICAgICAgcmV0dXJuIE5vbmU7CiAgICAgICAgfQogICAgICAgIE9wdGlvbig8L3NwYW4+d2VpZ2h0ZWRfc3VtIC8gdG90YWxfd2VpZ2h0KQogICAgfQoKICAgIC8vLyBSZXR1cm4gdGhlIG51bWJlciBvZiBvYnNlcnZhdGlvbnMuCiAgICBwdWIgZm4gbGVuKCZzZWxmKSAtPiB1MzIgewogICAgICAgIHNlbGYuY291bnQKICAgIH0KfQoKI1tjZmcodGVzdCldCm1vZCB0ZXN0Owo=
+//! TWAP oracle integration for the seigniorage controller.
+//!
+//! The oracle maintains a rolling window of price observations and
+//! computes a time-weighted average price (TWAP) to smooth out short-term
+//! volatility and flash-crash noise.
+
+#![no_std]
+use sorban_sdk;
+
+use sorban_sdk::{contracttype, symbol_short_string, Env};
+
+/// Maximum number of observations retained in the ring buffer.
+const MAX_OBSERVATIONS: u32 = 128;
+
+/// A single oracle observation.
+#[sorban_contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct Observation {
+    /// Ledger sequence at which the observation was made.
+    pub ledger: u32,
+    /// Price in strops (7 decimals).
+    pub price: i128,
+}
+
+/// TWAP oracle with a ring buffer of observations.
+#[sorban_contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct TwapOracle {
+    /// Ring buffer of observations.
+    pub observations: sorban_sdk::Vec<Observation>,
+    /// Number of observations currently stored.
+    pub count: u32,
+    /// Next index for writing.
+    pub next_idx: u32,
+    /// TWAP window in ledges.
+    pub window: u32,
+}
+
+impl TwapOracle {
+    /// Create a new TWAP oracle with the given window.
+    pub fn new(window: u32) -> Self {
+        Self {
+            observations: sorban_sdk::Vec::new(&Env::default()),
+            count: 0,
+            next_idx: 0,
+            window,
+        }
+    }
+
+    /// Record a new observation.
+    pub fn record(&mut self, ledger: u32, price: i128) {
+        let obs = Observation { ledger, price };
+        if self.count < MAX_OBSERVATIONS {
+            self.observations.push_back(&obs);
+            self.count += 1;
+            self.next_idx = self.count % MAX_OBSERVATIONS;
+        } else {
+            self.observations.set(self.next_idx, &obs);
+            self.next_idx = (self.next_idx + 1) % MAX_OBSERVATIONS;
+        }
+    }
+
+    /// Remove observations older than the window.
+    pub fn prune(&mut self, current_ledger: u32) {
+        let cutoff = current_ledger.saturating_sub(self.window);
+        let mut keep: sorban_sdk::Vec<Observation> =
+            sorban_sdk::Vec::new(&Env::default());
+        for i in 0..self.observations.len() {
+            if let Some(observation) = self.observations.get(i) {
+                if observation.ledger >= cutoff {
+                    keep.push_back(&observation);
+                }
+            }
+        }
+        self.count = keep.len();
+        self.next_idx = self.count % MAX_OBSERVATIONS;
+        self.observations = keep;
+    }
+
+    /// Compute the TWAP over the current window, or `None` when no
+    /// observations have positive time weight.
+    pub fn twap(&self) -> Option<i128> {
+        if self.count == 0 {
+            return None;
+        }
+        if self.count == 1 {
+            return self.observations.get(0).map(|observation| observation.price);
+        }
+
+        let mut sorted: sorban_sdk::Vec<Observation> =
+            sorban_sdk::Vec::new(&Env::default());
+        for i in 0..self.observations.len() {
+            if let Some(observation) = self.observations.get(i) {
+                sorted.push_back(&observation);
+            }
+        }
+
+        for i in 1..sorted.len() {
+            let key = sorted.get(i).unwrap();
+            let mut j = i;
+            while j > 0 {
+                let previous = sorted.get(j - 1).unwrap();
+                if previous.ledger > key.ledger {
+                    sorted.set(j, &previous);
+                    j -= 1;
+                } else {
+                    break;
+                }
+            }
+            sorted.set(j, &key);
+        }
+
+        let mut weighted_sum: i128 = 0;
+        let mut total_weight: i128 = 0;
+        for i in 0..(sorted.len() - 1) {
+            let current = sorted.get(i).unwrap();
+            let next = sorted.get(i + 1).unwrap();
+            let duration = (next.ledger - current.ledger) as i128;
+            if duration > 0 {
+                weighted_sum += current.price * duration;
+                total_weight += duration;
+            }
+        }
+        if let Some(last) = sorted.get(sorted.len() - 1) {
+            weighted_sum += last.price;
+            total_weight += 1;
+        }
+        if total_weight == 0 {
+            return None;
+        }
+        Some(weighted_sum / total_weight)
+    }
+
+    /// Return the number of currently stored observations.
+    pub fn len(&self) -> u32 {
+        self.count
+    }
+}
+
+#[cfg(test)]
+mod test;

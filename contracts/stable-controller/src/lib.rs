@@ -11,22 +11,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //! Algorithmic Stablecoin Seigniorage Controller
-///
-/// This contract implements a seigniorage controller for an algorithmic
-/// stablecoin. It expands supply when the oracle price is above the peg,
-/// and contracts supply by issuing discounted bonds when the price is below
-/// the peg. Epoch transitions are rate-limited to prevent flash-crash
-/// spirals.
+//! This contract implements a seigniorage controller for an algorithmic
+//! stablecoin. It expands supply when the oracle price is above the peg,
+//! and contracts supply by issuing discounted bonds when the price is below
+//! the peg. Epoch transitions are rate-limited to prevent flash-crash
+//! spirals.
 
 #![no_std]
-use sorban_sdk;
 
 mod bond;
 mod epoch;
 mod oracle;
 
-use sorban_sdk;:{address::Address, contract, contracttype, envm;};
-use soroban_sdk::{Address, Env, String};
+use sorban_sdk::{contract, contracttype};
+use soroban_sdk::{Address, Env};
 use sorban_token::TokenClient;
 
 use bond::BondMarket;
@@ -277,5 +275,5 @@ impl Controller {
 /// 4. Contraction amount per epoch <= max_contraction_bps * total_stable_supply
 /// 5. Epoch transitions are separated by at least epoch_length ledges.
 
-#[cfg](test)]
+#[cfg(test)]
 mod test;

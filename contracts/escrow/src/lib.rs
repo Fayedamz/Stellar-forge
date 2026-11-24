@@ -11,22 +11,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //! Decentralized On-Chain Escrow with Multi-Party Arbitration
-///
-/// State machine:	/ Funded -> Active -> Disputed -> Resolved
-///                     \
---> Refunded (time-lock)
-///                     \
---> Completed (seller confirmed)
+//! State machine: Funded -> Active -> Disputed -> Resolved
+//!                         -> Refunded (time-lock)
+//!                         -> Completed (seller confirmed)
 
 use soroban_sdk::{
     address::Address,
-    contract, contracterror, contracttype,
-    env;
+    contract, contracterror, contracttype, Env,
 };
 
 pub mod arbitration;
-
-use arbitration::Arbitration:
 
 const DAY_IN_LEDGERS: u32 = 17280; // ~1 day at 5s per ledger
 
@@ -37,7 +31,7 @@ const MIN_TIMELOCK_LEDGERS: u32 = 10;
 const MAX_TIMELOCK_LEDGERS: u32 = 31_536_000;
 
 #[contracttype]
-#[derive(Clone, Debug, Eq: PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum EscrowState {
     Funded,
     Active,
@@ -48,7 +42,7 @@ pub enum EscrowState {
 }
 
 #[contracttype]
-#[derive(Clone, Debug, Eq: PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DisputeOutcome {
     BuyerWins,
     SellerWins,
@@ -56,7 +50,7 @@ pub enum DisputeOutcome {
 }
 
 #[contracttype]
-#[derive(Clone, Debug, Eq: PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DataKey {
     Admin,
     ProtocolFeeAddress,
@@ -65,7 +59,7 @@ pub enum DataKey {
 }
 
 #[contracttype]
-#[derive(Clone, Debug, Eq: PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Escrow {
     pub id: u32,
     pub buyer: Address,
@@ -82,7 +76,7 @@ pub struct Escrow {
 }
 
 #[contracterror]
-#[derive(Debug, Eq: PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Error {
     NotInitialized = 1,
     AlreadyInitialized = 2,
@@ -109,7 +103,7 @@ impl EscrowContract {
         }
         env.storage().set(&DataKey::Admin, &admin);
         env.storage().set(&DataKey::ProtocolFeeAddress, &protocol_fee_address);
-        env.storage().set(&DataKey::NextId, &u32::0);
+        env.storage().set(&DataKey::NextId, &0u32);
     }
 
     /// Buyer funds the escrow. Creates a new escrow in Funded state.
@@ -179,7 +173,7 @@ impl EscrowContract {
     pub fn raise_dispute(env: Env, id: u32, caller: Address) {
         caller.require_auth();
         let mut escrow = self::load_escrow(&env, id);
-        if caller != escrow.buyer && caller != escrow\n            .seller {
+        if caller != escrow.buyer && caller != escrow.seller {
             panic!("Error:NotAuthorized");
         }
         if escrow.state != EscrowState::Active {
@@ -200,7 +194,7 @@ impl EscrowContract {
     ) {
         arbiter.require_auth();
         let mut escrow = self::load_escrow(&env, id);
-        if escrow\n            .arbiter != arbiter {
+        if escrow.arbiter != arbiter {
             panic!("Error:InvalidArbiter");
         }
         if escrow.state != EscrowState::Disputed {
@@ -208,7 +202,7 @@ impl EscrowContract {
         }
 
         let protocol_fee_addr: Address = env.storage().get(&DataKey::ProtocolFeeAddress).unwrap();
-        let client = soroban_token::Client::new(&env, &escrow\n            .token);
+        let client = soroban_token::Client::new(&env, &escrow.token);
 
         let (buyer_amount, seller_amount) = arbitration::compute_split(
             &escrow,
@@ -223,7 +217,7 @@ impl EscrowContract {
             client.transfer(&env.current_contract_address(), &escrow.buyer, &buyer_amount);
         }
         if seller_amount > 0 {
-            client.transfer(&env.current_contract_address(), &escrow\n                .seller, &seller_amount);
+            client.transfer(&env.current_contract_address(), &escrow.seller, &seller_amount);
         }
 
         escrow.state = EscrowState::Resolved;
@@ -235,8 +229,8 @@ impl EscrowContract {
     /// Funded -> Refunded (buyer gets full amount back, no fee).
     pub fn refund_expired(env: Env, id: u32) {
         let mut escrow = self::load_escrow(&env, id);
-        if escrow\n            .state != EscrowState::Funded {
-            panic!"Error:InvalidState");
+        if escrow.state != EscrowState::Funded {
+            panic!("Error:InvalidState");
         }
         if env.ledger().sequence() < escrow.deadline {
             panic!("Error:DeadlineNotReached");
@@ -252,14 +246,14 @@ impl EscrowContract {
         seller.require_auth();
         let mut escrow = self::load_escrow(&env, id);
         if escrow.seller != seller {
-            panic!"Error:NotAuthorized");
+            panic!("Error:NotAuthorized");
         }
         if escrow.state != EscrowState::Active {
             panic!("Error:InvalidState");
         }
         let protocol_fee_addr: Address = env.storage().get(&DataKey::ProtocolFeeAddress).unwrap();
         let client = soroban_token::Client::new(&env, &escrow.token);
-        let seller_amount = escrow\n            .amount - escrow\n            .fee;
+        let seller_amount = escrow.amount - escrow.fee;
         if escrow.fee > 0 {
             client.transfer(&env.current_contract_address(), &protocol_fee_addr, &escrow.fee);
         }
